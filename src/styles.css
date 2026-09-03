@@ -1,0 +1,40 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #22232a;
+  background: #f7f7fb;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #f7f7fb; }
+button { font: inherit; }
+.app-shell { min-height: 100vh; padding-bottom: 86px; }
+.topbar { display: flex; justify-content: space-between; gap: 24px; align-items: center; padding: 24px clamp(18px, 4vw, 48px); background: white; border-bottom: 1px solid #e8e8ef; position: sticky; top: 0; z-index: 5; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: clamp(24px, 4vw, 36px); }
+h2 { margin-bottom: 0; font-size: 30px; }
+.eyebrow { margin-bottom: 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #72727d; font-weight: 700; }
+.avatars { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.avatar { border: 1px solid #dedee8; background: #fbfbfe; border-radius: 16px; min-width: 70px; padding: 8px; cursor: pointer; }
+.avatar span { display: block; font-size: 26px; }
+.avatar small { display: block; margin-top: 2px; }
+.page { width: min(1120px, 100%); margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px); }
+.section-heading { display: flex; gap: 16px; justify-content: space-between; align-items: end; margin-bottom: 20px; }
+.points-pill { background: #fff4c6; border: 1px solid #ead98b; border-radius: 999px; padding: 10px 14px; font-weight: 700; }
+.card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.card { background: white; border: 1px solid #e2e2ea; border-radius: 22px; padding: 22px; min-height: 145px; box-shadow: 0 6px 20px rgba(39,39,53,.05); }
+.card-title { display: flex; align-items: center; gap: 10px; }
+.card-title span { font-size: 27px; }
+.card-title h3 { margin: 0; font-size: 22px; }
+.card p { color: #62626e; font-size: 17px; line-height: 1.5; margin-top: 16px; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid #dedee8; backdrop-filter: blur(12px); z-index: 10; }
+.nav-item { border: 0; border-radius: 15px; background: transparent; min-height: 58px; padding: 7px 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; font-weight: 700; color: #64646e; cursor: pointer; }
+.nav-item.active { background: #ece9ff; color: #2e256f; }
+.nav-icon { font-size: 22px; }
+@media (max-width: 720px) {
+  .topbar { align-items: flex-start; flex-direction: column; }
+  .avatars { justify-content: flex-start; }
+  .card-grid { grid-template-columns: 1fr; }
+  .section-heading { align-items: flex-start; flex-direction: column; }
+  .points-pill { font-size: 14px; }
+  .nav-item { font-size: 12px; }
+}
