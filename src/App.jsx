@@ -54,19 +54,22 @@ function App() {
     Ronin: 28,
   })
 
-  const [allowance, setAllowance] = useState({
-    Davina: 0,
-    Ronin: 0,
-  })
+ const [allowance, setAllowance] = useState({
+  Davina: 0,
+  Ronin: 0,
+})
+
+const [choreHistory, setChoreHistory] = useState([])
 
 function completeChore(id) {
   const chore = chores.find((item) => item.id === id)
 
   if (!chore || chore.completed) return
 
+  const completionId = crypto.randomUUID()
   setChores((current) =>
     current.map((item) =>
-      item.id === id ? { ...item, completed: true } : item
+      item.id === id ? { ...item, completed: true, completionId } : item
     )
   )
 
@@ -89,6 +92,21 @@ function completeChore(id) {
 
     return updated
   })
+  const completedAt = new Date().toISOString()
+
+setChoreHistory((current) => [
+  ...current,
+  ...chore.assignedTo.map((name) => ({
+    id: `${completionId}-${name}`,
+    completionId,
+    choreId: chore.id,
+    title: chore.title,
+    child: name,
+    points: chore.points,
+    allowance: chore.allowance,
+    completedAt,
+  })),
+])
   const audioContext = new (window.AudioContext || window.webkitAudioContext)()
 const oscillator = audioContext.createOscillator()
 const gainNode = audioContext.createGain()
@@ -119,9 +137,13 @@ function undoChore(id) {
 
   if (!chore || !chore.completed) return
 
+  const completionId = chore.completionId
+
   setChores((current) =>
     current.map((item) =>
-      item.id === id ? { ...item, completed: false } : item
+      item.id === id
+        ? { ...item, completed: false, completionId: null }
+        : item
     )
   )
 
@@ -139,11 +161,22 @@ function undoChore(id) {
     const updated = { ...current }
 
     chore.assignedTo.forEach((name) => {
-      updated[name] = Math.max(0, updated[name] - chore.allowance)
+      updated[name] = Math.max(
+        0,
+        updated[name] - chore.allowance
+      )
     })
 
     return updated
   })
+
+  if (completionId) {
+    setChoreHistory((current) =>
+      current.filter(
+        (entry) => entry.completionId !== completionId
+      )
+    )
+  }
 }
 
   return (
@@ -177,12 +210,13 @@ function undoChore(id) {
         {active === 'Today' && <Today points={points} />}
         {active === 'Chores' && (
           <Chores
-            chores={chores}
-            points={points}
-            allowance={allowance}
-            completeChore={completeChore}
-            undoChore={undoChore}
-          />
+  chores={chores}
+  points={points}
+  allowance={allowance}
+  choreHistory={choreHistory}
+  completeChore={completeChore}
+  undoChore={undoChore}
+/>
         )}
         {active !== 'Today' && active !== 'Chores' && (
           <Placeholder title={active} />
@@ -248,21 +282,117 @@ function Chores({
   chores,
   points,
   allowance,
+  choreHistory,
   completeChore,
   undoChore,
 }) {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
   const todaysChores = chores.filter((chore) => chore.days.includes(today))
-
+const [showHistory, setShowHistory] = useState(false)
+const [historyChild, setHistoryChild] = useState('All')
+const [historyDate, setHistoryDate] = useState('Today')
   return (
     <section className="page">
       <div className="section-heading">
-        <div>
-          <p className="eyebrow">Today</p>
-          <h2>Chores</h2>
-        </div>
-      </div>
+  <div>
+    <p className="eyebrow">Today</p>
+    <h2>Chores</h2>
+  </div>
 
+  <button
+    className="action-button secondary"
+    onClick={() => setShowHistory(!showHistory)}
+  >
+    {showHistory ? 'Back to Today' : 'History'}
+  </button>
+</div>
+{showHistory && (
+  <div className="card">
+    <h3>Chore History</h3>
+<div className="history-filters">
+  {['All', 'Davina', 'Ronin'].map((name) => (
+    <button
+      key={name}
+      className={
+        historyChild === name
+          ? 'action-button'
+          : 'action-button secondary'
+      }
+      onClick={() => setHistoryChild(name)}
+    >
+      {name}
+    </button>
+  ))}
+</div>
+
+<div className="history-filters">
+  {['Today', 'Last 7 Days', 'All'].map((range) => (
+    <button
+      key={range}
+      className={
+        historyDate === range
+          ? 'action-button'
+          : 'action-button secondary'
+      }
+      onClick={() => setHistoryDate(range)}
+    >
+      {range}
+    </button>
+  ))}
+</div>
+    {choreHistory.length === 0 ? (
+      <p>No completed chores yet.</p>
+    ) : (
+choreHistory
+  .filter(
+    (entry) =>
+      historyChild === 'All' ||
+      entry.child === historyChild
+  )
+  .filter((entry) => {
+    if (historyDate === 'All') return true
+
+    const completed = new Date(entry.completedAt)
+    const now = new Date()
+
+    if (historyDate === 'Today') {
+      return completed.toDateString() === now.toDateString()
+    }
+
+    if (historyDate === 'Last 7 Days') {
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(now.getDate() - 6)
+      sevenDaysAgo.setHours(0, 0, 0, 0)
+
+      return completed >= sevenDaysAgo
+    }
+
+    return true
+  })
+  .slice()
+  .reverse()
+  .map((entry) => (
+          <div key={entry.id} className="history-item">
+            <strong>
+              {entry.child === 'Davina' ? '👧' : '👦'} {entry.child}
+            </strong>
+
+            <p>{entry.title}</p>
+
+            <p>
+              ⭐ {entry.points}
+              {entry.allowance > 0 &&
+                ` · $${entry.allowance.toFixed(2)}`}
+            </p>
+
+            <small>
+              {new Date(entry.completedAt).toLocaleString()}
+            </small>
+          </div>
+        ))
+    )}
+  </div>
+)}
       <div className="card-grid">
         {todaysChores.map((chore) => (
           <article className="card" key={chore.id}>
