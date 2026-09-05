@@ -22,6 +22,7 @@ const startingChores = [
     assignedTo: ['Davina'],
     points: 5,
     allowance: 0,
+    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
     completed: false,
   },
   {
@@ -30,6 +31,7 @@ const startingChores = [
     assignedTo: ['Ronin'],
     points: 5,
     allowance: 0,
+    days: ['Monday', 'Wednesday', 'Friday'],
     completed: false,
   },
   {
@@ -38,6 +40,7 @@ const startingChores = [
     assignedTo: ['Davina', 'Ronin'],
     points: 5,
     allowance: 0.5,
+    days: ['Tuesday', 'Thursday'],
     completed: false,
   },
 ]
@@ -248,6 +251,9 @@ function Chores({
   completeChore,
   undoChore,
 }) {
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+  const todaysChores = chores.filter((chore) => chore.days.includes(today))
+
   return (
     <section className="page">
       <div className="section-heading">
@@ -258,7 +264,7 @@ function Chores({
       </div>
 
       <div className="card-grid">
-        {chores.map((chore) => (
+        {todaysChores.map((chore) => (
           <article className="card" key={chore.id}>
             <div className="card-title">
               <span>{chore.completed ? '✅' : '🧹'}</span>
@@ -278,7 +284,13 @@ function Chores({
               {chore.allowance > 0 &&
                 ` · $${chore.allowance.toFixed(2)} allowance`}
             </p>
-
+<p className="repeat-days">
+  🔁 {chore.days.length === 7
+    ? 'Every day'
+    : chore.days
+        .map((day) => day.slice(0, 3))
+        .join(', ')}
+</p>
             {!chore.completed ? (
               <button
                 className="action-button"
