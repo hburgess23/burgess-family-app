@@ -75,3 +75,8 @@ h2 { margin-bottom: 0; font-size: 30px; }
     transform: translateX(-50%) scale(0.95);
   }
 }
+.active-avatar {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+  transform: scale(1.05);
+}

@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 
 const family = [
-  { name: 'Harold', role: 'Parent', emoji: '👨' },
-  { name: 'Divya', role: 'Parent', emoji: '👩' },
-  { name: 'Davina', role: 'Child', emoji: '👧' },
-  { name: 'Ronin', role: 'Child', emoji: '👦' },
+  { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
+  { name: 'Divya', role: 'Parent', emoji: '👩🏽' },
+  { name: 'Davina', role: 'Child', emoji: '👧🏽' },
+  { name: 'Ronin', role: 'Child', emoji: '👦🏽' },
 ]
 
 const sections = [
@@ -47,6 +47,7 @@ const startingChores = [
 
 function App() {
   const [active, setActive] = useState('Today')
+  const [activeUser, setActiveUser] = useState(family[0])
   const [chores, setChores] = useState(startingChores)
   const [celebration, setCelebration] = useState(false)
   const [points, setPoints] = useState({
@@ -195,10 +196,15 @@ function undoChore(id) {
         <div className="avatars" aria-label="Family members">
           {family.map((person) => (
             <button
-              key={person.name}
-              className="avatar"
-              title={`${person.name} · ${person.role}`}
-            >
+  key={person.name}
+  className={
+    activeUser.name === person.name
+      ? 'avatar active-avatar'
+      : 'avatar'
+  }
+  title={`${person.name} · ${person.role}`}
+  onClick={() => setActiveUser(person)}
+>
               <span>{person.emoji}</span>
               <small>{person.name}</small>
             </button>
@@ -214,6 +220,7 @@ function undoChore(id) {
   points={points}
   allowance={allowance}
   choreHistory={choreHistory}
+  activeUser={activeUser}
   completeChore={completeChore}
   undoChore={undoChore}
 />
@@ -283,6 +290,7 @@ function Chores({
   points,
   allowance,
   choreHistory,
+  activeUser,
   completeChore,
   undoChore,
 }) {
@@ -291,6 +299,12 @@ function Chores({
 const [showHistory, setShowHistory] = useState(false)
 const [historyChild, setHistoryChild] = useState('All')
 const [historyDate, setHistoryDate] = useState('Today')
+const isParent = activeUser.role === 'Parent'
+const visibleChores = isParent
+  ? todaysChores
+  : todaysChores.filter((chore) =>
+      chore.assignedTo.includes(activeUser.name)
+    )
   return (
     <section className="page">
       <div className="section-heading">
@@ -299,14 +313,16 @@ const [historyDate, setHistoryDate] = useState('Today')
     <h2>Chores</h2>
   </div>
 
+  {isParent && (
   <button
     className="action-button secondary"
     onClick={() => setShowHistory(!showHistory)}
   >
     {showHistory ? 'Back to Today' : 'History'}
   </button>
+)}
 </div>
-{showHistory && (
+{isParent && showHistory && (
   <div className="card">
     <h3>Chore History</h3>
 <div className="history-filters">
@@ -395,7 +411,7 @@ choreHistory
 )}
       {!showHistory && (
   <div className="card-grid">
-    {todaysChores.map((chore) => (
+    {visibleChores.map((chore) => (
           <article className="card" key={chore.id}>
             <div className="card-title">
               <span>{chore.completed ? '✅' : '🧹'}</span>
