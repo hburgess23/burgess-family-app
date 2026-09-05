@@ -393,8 +393,9 @@ choreHistory
     )}
   </div>
 )}
-      <div className="card-grid">
-        {todaysChores.map((chore) => (
+      {!showHistory && (
+  <div className="card-grid">
+    {todaysChores.map((chore) => (
           <article className="card" key={chore.id}>
             <div className="card-title">
               <span>{chore.completed ? '✅' : '🧹'}</span>
@@ -447,7 +448,7 @@ choreHistory
           </article>
         ))}
       </div>
-
+)}
       <div className="card">
         <h3>Current balances</h3>
         <p>
