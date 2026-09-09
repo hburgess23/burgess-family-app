@@ -220,14 +220,83 @@ function App() {
   }, [householdId])
   const [celebration, setCelebration] = useState(false)
   const [points, setPoints] = useState({
-    Davina: 35,
-    Ronin: 28,
+    Davina: 0,
+    Ronin: 0,
   })
 
-    const [allowance, setAllowance] = useState({
-  Davina: 0,
-  Ronin: 0,
-})
+  const [allowance, setAllowance] = useState({
+    Davina: 0,
+    Ronin: 0,
+  })
+
+  useEffect(() => {
+    if (!householdId) return
+
+    async function loadBalances() {
+      const [
+        { data: profileRows, error: profilesError },
+        { data: adjustmentRows, error: adjustmentsError },
+        { data: completionRows, error: completionsError },
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, name')
+          .eq('household_id', householdId)
+          .eq('role', 'Child')
+          .eq('active', true),
+
+        supabase
+          .from('reward_adjustments')
+          .select('profile_id, points_delta, allowance_cents_delta')
+          .eq('household_id', householdId),
+
+        supabase
+          .from('chore_completions')
+          .select('profile_id, points_awarded, allowance_cents_awarded')
+          .eq('household_id', householdId),
+      ])
+
+      if (profilesError || adjustmentsError || completionsError) {
+        console.error(
+          'Could not load balances:',
+          profilesError || adjustmentsError || completionsError
+        )
+        return
+      }
+
+      const profileNames = Object.fromEntries(
+        (profileRows || []).map((profile) => [profile.id, profile.name])
+      )
+
+      const nextPoints = { Davina: 0, Ronin: 0 }
+      const nextAllowanceCents = { Davina: 0, Ronin: 0 }
+
+      ;(adjustmentRows || []).forEach((row) => {
+        const name = profileNames[row.profile_id]
+        if (!name) return
+
+        nextPoints[name] += row.points_delta || 0
+        nextAllowanceCents[name] += row.allowance_cents_delta || 0
+      })
+
+      ;(completionRows || []).forEach((row) => {
+        const name = profileNames[row.profile_id]
+        if (!name) return
+
+        nextPoints[name] += row.points_awarded || 0
+        nextAllowanceCents[name] += row.allowance_cents_awarded || 0
+      })
+
+      setPoints(nextPoints)
+
+      setAllowance({
+        Davina: nextAllowanceCents.Davina / 100,
+        Ronin: nextAllowanceCents.Ronin / 100,
+      })
+    }
+
+    loadBalances()
+  }, [householdId])
     // completions: { 'YYYY-MM-DD': { 'chore_id-child': { date, choreId, child, title, points, allowance, completedAt } } }
     const [completions, setCompletions] = useState({})
 
