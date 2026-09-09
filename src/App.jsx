@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -96,8 +97,57 @@ function formatWeekRange(weekStart) {
   return `${start} – ${end}`
 }
 function App() {
+  const [session, setSession] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [householdId, setHouseholdId] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setAuthLoading(false)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
+      setAuthLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+    }, [])
+
   const [active, setActive] = useState('Today')
   const [activeUser, setActiveUser] = useState(family[0])
+  useEffect(() => {
+  if (!session?.user) {
+    setHouseholdId(null)
+    return
+  }
+
+  async function loadLoggedInProfile() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('name, role, emoji, household_id')
+      .eq('auth_user_id', session.user.id)
+      .single()
+
+    if (error) {
+      console.error('Could not load profile:', error)
+      return
+    }
+
+    setHouseholdId(data.household_id)
+
+    setActiveUser({
+      name: data.name,
+      role: data.role,
+      emoji: data.emoji,
+    })
+  }
+
+  loadLoggedInProfile()
+}, [session])
     const [chores] = useState(startingChores)
   const [celebration, setCelebration] = useState(false)
   const [points, setPoints] = useState({
@@ -224,7 +274,23 @@ function App() {
       })
       return childCompletions.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
     }
+  if (authLoading) {
+    return (
+      <div className="app-shell">
+        <main>
+          <section className="page">
+            <div className="card">
+              <p>Loading…</p>
+            </div>
+          </section>
+        </main>
+      </div>
+    )
+  }
 
+  if (!session) {
+    return <Login />
+  }
   return (
     <div className="app-shell">
       {celebration && (
@@ -255,6 +321,12 @@ function App() {
             </button>
           ))}
         </div>
+        <button
+  className="action-button secondary"
+  onClick={() => supabase.auth.signOut()}
+>
+  Sign Out
+</button>
       </header>
 
       <main>
@@ -741,7 +813,77 @@ function Chores({
     </section>
   )
 }
+function Login() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+  const [signingIn, setSigningIn] = useState(false)
 
+  async function handleLogin(event) {
+    event.preventDefault()
+    setMessage('')
+    setSigningIn(true)
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setMessage(error.message)
+    }
+
+    setSigningIn(false)
+  }
+
+  return (
+    <div className="app-shell">
+      <main>
+        <section className="page">
+          <div className="card">
+            <p className="eyebrow">Welcome home</p>
+            <h1>The Burgess Family App</h1>
+            <p>Sign in with your parent account.</p>
+
+            <form onSubmit={handleLogin}>
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </label>
+
+              <label>
+                Password
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+              </label>
+
+              <button
+                className="action-button"
+                type="submit"
+                disabled={signingIn}
+              >
+                {signingIn ? 'Signing in…' : 'Sign In'}
+              </button>
+
+              {message && <p>{message}</p>}
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
 function Card({ title, icon, children }) {
   return (
     <article className="card">
