@@ -300,6 +300,70 @@ function App() {
     // completions: { 'YYYY-MM-DD': { 'chore_id-child': { date, choreId, child, title, points, allowance, completedAt } } }
     const [completions, setCompletions] = useState({})
 
+    useEffect(() => {
+      if (!householdId) return
+
+      async function loadCompletions() {
+        const [
+          { data: completionRows, error: completionsError },
+          { data: profileRows, error: profilesError },
+        ] = await Promise.all([
+          supabase
+            .from('chore_completions')
+            .select(
+              'id, chore_id, profile_id, completion_date, completed_at, points_awarded, allowance_cents_awarded'
+            )
+            .eq('household_id', householdId),
+
+          supabase
+            .from('profiles')
+            .select('id, name')
+            .eq('household_id', householdId),
+        ])
+
+        if (completionsError || profilesError) {
+          console.error(
+            'Could not load completions:',
+            completionsError || profilesError
+          )
+          return
+        }
+
+        const profileNames = Object.fromEntries(
+          (profileRows || []).map((profile) => [profile.id, profile.name])
+        )
+
+        const nextCompletions = {}
+
+        ;(completionRows || []).forEach((row) => {
+          const child = profileNames[row.profile_id]
+          const chore = chores.find((item) => item.id === row.chore_id)
+
+          if (!child || !chore) return
+
+          if (!nextCompletions[row.completion_date]) {
+            nextCompletions[row.completion_date] = {}
+          }
+
+          nextCompletions[row.completion_date][`${row.chore_id}-${child}`] = {
+            id: row.id,
+            completionId: row.id,
+            date: row.completion_date,
+            choreId: row.chore_id,
+            child,
+            title: chore.title,
+            points: row.points_awarded || 0,
+            allowance: (row.allowance_cents_awarded || 0) / 100,
+            completedAt: row.completed_at,
+          }
+        })
+
+        setCompletions(nextCompletions)
+      }
+
+      loadCompletions()
+    }, [householdId, chores])
+
     function completeChore(choreId, selectedDate, child) {
       const dateStr = getLocalDateString(selectedDate)
       const chore = chores.find((item) => item.id === choreId)
