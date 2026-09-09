@@ -148,7 +148,76 @@ function App() {
 
   loadLoggedInProfile()
 }, [session])
-    const [chores] = useState(startingChores)
+    const [chores, setChores] = useState([])
+
+  useEffect(() => {
+    if (!householdId) return
+
+    async function loadChores() {
+      const [
+        { data: choreRows, error: choresError },
+        { data: assignmentRows, error: assignmentsError },
+        { data: profileRows, error: profilesError },
+      ] = await Promise.all([
+        supabase
+          .from('chores')
+          .select('id, title, points, allowance_cents, days')
+          .eq('household_id', householdId)
+          .eq('active', true)
+          .order('created_at', { ascending: true }),
+
+        supabase
+          .from('chore_assignments')
+          .select('chore_id, profile_id')
+          .eq('household_id', householdId),
+
+        supabase
+          .from('profiles')
+          .select('id, name')
+          .eq('household_id', householdId)
+          .eq('active', true),
+      ])
+
+      if (choresError || assignmentsError || profilesError) {
+        console.error(
+          'Could not load chores:',
+          choresError || assignmentsError || profilesError
+        )
+        return
+      }
+
+      const profileNames = Object.fromEntries(
+        (profileRows || []).map((profile) => [profile.id, profile.name])
+      )
+
+      const assignedByChore = {}
+
+      ;(assignmentRows || []).forEach((assignment) => {
+        const name = profileNames[assignment.profile_id]
+
+        if (!name) return
+
+        if (!assignedByChore[assignment.chore_id]) {
+          assignedByChore[assignment.chore_id] = []
+        }
+
+        assignedByChore[assignment.chore_id].push(name)
+      })
+
+      const liveChores = (choreRows || []).map((chore) => ({
+        id: chore.id,
+        title: chore.title,
+        assignedTo: assignedByChore[chore.id] || [],
+        points: chore.points || 0,
+        allowance: (chore.allowance_cents || 0) / 100,
+        days: chore.days || [],
+      }))
+
+      setChores(liveChores)
+    }
+
+    loadChores()
+  }, [householdId])
   const [celebration, setCelebration] = useState(false)
   const [points, setPoints] = useState({
     Davina: 35,
