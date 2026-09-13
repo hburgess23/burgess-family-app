@@ -151,6 +151,70 @@ export default function Meals({ householdId, activeUser }) {
     setMessage('Meal plan saved.')
   }
 
+  async function copyPreviousWeek() {
+    if (!householdId || !isParent) return
+
+    const hasCurrentMeals = Object.values(mealValues).some(
+      (value) => value && value.trim()
+    )
+
+    if (
+      hasCurrentMeals &&
+      !window.confirm(
+        'Replace the current week with meals from the previous week?'
+      )
+    ) {
+      return
+    }
+
+    setMessage('')
+    setErrorMessage('')
+
+    const previousDates = mealDates.map((date) => {
+      const previous = new Date(date)
+      previous.setDate(previous.getDate() - 7)
+      return previous
+    })
+
+    const { data, error } = await supabase
+      .from('meal_entries')
+      .select('meal_date, meal_type, audience, meal_text')
+      .eq('household_id', householdId)
+      .gte('meal_date', getLocalDateString(previousDates[0]))
+      .lte('meal_date', getLocalDateString(previousDates[4]))
+
+    if (error) {
+      console.error('Could not copy previous week:', error)
+      setErrorMessage('Could not load the previous week.')
+      return
+    }
+
+    const previousValues = {}
+
+    ;(data || []).forEach((row) => {
+      previousValues[
+        `${row.meal_date}|${row.meal_type}|${row.audience}`
+      ] = row.meal_text || ''
+    })
+
+    const copiedValues = {}
+
+    mealDates.forEach((currentDate, index) => {
+      const previousDate = previousDates[index]
+
+      mealSlots.forEach((slot) => {
+        const previousKey =
+          `${getLocalDateString(previousDate)}|${slot.type}|${slot.audience}`
+
+        copiedValues[
+          mealKey(currentDate, slot.type, slot.audience)
+        ] = previousValues[previousKey] || ''
+      })
+    })
+
+    setMealValues(copiedValues)
+    setMessage('Previous week copied. Review it, then click Save Week.')
+  }
   const visibleSlots = isParent
     ? mealSlots
     : mealSlots.filter(
@@ -168,14 +232,25 @@ export default function Meals({ householdId, activeUser }) {
         </div>
 
         {isParent && (
-          <button
-            className="action-button"
-            type="button"
-            onClick={saveWeek}
-            disabled={saving}
-          >
-            {saving ? 'Saving…' : 'Save Week'}
-          </button>
+          <div className="meal-header-actions">
+            <button
+              className="action-button secondary"
+              type="button"
+              onClick={copyPreviousWeek}
+              disabled={saving}
+            >
+              Copy Previous Week
+            </button>
+
+            <button
+              className="action-button"
+              type="button"
+              onClick={saveWeek}
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : 'Save Week'}
+            </button>
+          </div>
         )}
       </div>
 

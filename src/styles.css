@@ -668,3 +668,20 @@ h2 { margin-bottom: 0; font-size: 30px; }
   }
 }
 
+
+.meal-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .meal-header-actions {
+    width: 100%;
+  }
+
+  .meal-header-actions .action-button {
+    flex: 1;
+  }
+}
