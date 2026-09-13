@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import Meals from './Meals'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -718,7 +719,7 @@ function App() {
       </header>
 
       <main>
-        {active === 'Today' && <Today points={points} />}
+        {active === 'Today' && <Today points={points} setActive={setActive} />}
         {active === 'Chores' && (
           <Chores
             chores={chores}
@@ -735,7 +736,14 @@ function App() {
             householdId={householdId}
           />
         )}
-        {active !== 'Today' && active !== 'Chores' && (
+        {active === 'Meals' && (
+          <Meals
+            householdId={householdId}
+            activeUser={activeUser}
+          />
+        )}
+
+        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && (
           <Placeholder title={active} />
         )}
       </main>
@@ -756,7 +764,7 @@ function App() {
   )
 }
 
-function Today({ points }) {
+function Today({ points, setActive }) {
   return (
     <section className="page">
       <div className="section-heading">
@@ -771,23 +779,23 @@ function Today({ points }) {
       </div>
 
       <div className="card-grid">
-        <Card title="Calendar" icon="📅">
+        <Card title="Calendar" icon="📅" onClick={() => setActive('Calendar')}>
           <p>No events added yet.</p>
         </Card>
 
-        <Card title="Chores" icon="✅">
+        <Card title="Chores" icon="✅" onClick={() => setActive('Chores')}>
           <p>Tap Chores below to see today’s chores.</p>
         </Card>
 
-        <Card title="Meals" icon="🍽️">
+        <Card title="Meals" icon="🍽️" onClick={() => setActive('Meals')}>
           <p>Lunch boxes, snacks, after-school lunch and dinner.</p>
         </Card>
 
-        <Card title="Reminders" icon="🔔">
+        <Card title="Reminders" icon="🔔" onClick={() => setActive('More')}>
           <p>Family reminders will appear here.</p>
         </Card>
 
-        <Card title="Messages" icon="💬">
+        <Card title="Messages" icon="💬" onClick={() => setActive('More')}>
           <p>Your family group chat will appear here.</p>
         </Card>
       </div>
@@ -1652,9 +1660,24 @@ function Login() {
     </div>
   )
 }
-function Card({ title, icon, children }) {
+function Card({ title, icon, children, onClick }) {
+  function handleKeyDown(event) {
+    if (!onClick) return
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onClick()
+    }
+  }
+
   return (
-    <article className="card">
+    <article
+      className={onClick ? 'card clickable-card' : 'card'}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <div className="card-title">
         <span>{icon}</span>
         <h3>{title}</h3>
@@ -1663,7 +1686,6 @@ function Card({ title, icon, children }) {
     </article>
   )
 }
-
 function Placeholder({ title }) {
   return (
     <section className="page">
