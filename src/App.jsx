@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import Meals from './Meals'
+import More from './More'
+import Grocery from './Grocery'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -743,7 +745,21 @@ function App() {
           />
         )}
 
-        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && (
+        {active === 'Grocery' && (
+          <Grocery
+            householdId={householdId}
+            activeUser={activeUser}
+          />
+        )}
+
+        {active === 'More' && (
+          <More
+            householdId={householdId}
+            activeUser={activeUser}
+          />
+        )}
+
+        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && active !== 'Grocery' && active !== 'More' && (
           <Placeholder title={active} />
         )}
       </main>
@@ -789,6 +805,13 @@ function Today({ points, setActive }) {
 
         <Card title="Meals" icon="🍽️" onClick={() => setActive('Meals')}>
           <p>Lunch boxes, snacks, after-school lunch and dinner.</p>
+        </Card>
+        <Card
+          title="Grocery"
+          icon="🛒"
+          onClick={() => setActive('Grocery')}
+        >
+          <p>Add items and keep the family shopping list up to date.</p>
         </Card>
 
         <Card title="Reminders" icon="🔔" onClick={() => setActive('More')}>
