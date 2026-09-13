@@ -41,6 +41,8 @@ export default function Meals({ householdId, activeUser }) {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [copyFromDay, setCopyFromDay] = useState(0)
+  const [copyToDay, setCopyToDay] = useState(1)
 
   const isParent = activeUser.role === 'Parent'
 
@@ -151,6 +153,61 @@ export default function Meals({ householdId, activeUser }) {
     setMessage('Meal plan saved.')
   }
 
+  function copyDay() {
+    if (!isParent) return
+
+    if (copyFromDay === copyToDay) {
+      setErrorMessage('Choose two different days.')
+      setMessage('')
+      return
+    }
+
+    const sourceDate = mealDates[copyFromDay]
+    const targetDate = mealDates[copyToDay]
+
+    const targetHasMeals = mealSlots.some((slot) => {
+      const value =
+        mealValues[mealKey(targetDate, slot.type, slot.audience)] || ''
+
+      return value.trim()
+    })
+
+    if (
+      targetHasMeals &&
+      !window.confirm(
+        `Replace ${getDayName(targetDate)} with ${getDayName(sourceDate)}'s meals?`
+      )
+    ) {
+      return
+    }
+
+    setMealValues((current) => {
+      const updated = { ...current }
+
+      mealSlots.forEach((slot) => {
+        const sourceKey = mealKey(
+          sourceDate,
+          slot.type,
+          slot.audience
+        )
+
+        const targetKey = mealKey(
+          targetDate,
+          slot.type,
+          slot.audience
+        )
+
+        updated[targetKey] = current[sourceKey] || ''
+      })
+
+      return updated
+    })
+
+    setErrorMessage('')
+    setMessage(
+      `${getDayName(sourceDate)} copied to ${getDayName(targetDate)}. Review it, then click Save Week.`
+    )
+  }
   async function copyPreviousWeek() {
     if (!householdId || !isParent) return
 
@@ -287,6 +344,56 @@ export default function Meals({ householdId, activeUser }) {
           Next Week →
         </button>
       </div>
+
+      {isParent && (
+        <div className="card copy-day-card">
+          <div className="copy-day-controls">
+            <strong>Copy a day</strong>
+
+            <label>
+              From
+              <select
+                value={copyFromDay}
+                onChange={(event) =>
+                  setCopyFromDay(Number(event.target.value))
+                }
+              >
+                {mealDates.map((date, index) => (
+                  <option value={index} key={`from-${getLocalDateString(date)}`}>
+                    {getDayName(date)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <span className="copy-day-arrow">→</span>
+
+            <label>
+              To
+              <select
+                value={copyToDay}
+                onChange={(event) =>
+                  setCopyToDay(Number(event.target.value))
+                }
+              >
+                {mealDates.map((date, index) => (
+                  <option value={index} key={`to-${getLocalDateString(date)}`}>
+                    {getDayName(date)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              className="action-button secondary"
+              type="button"
+              onClick={copyDay}
+            >
+              Copy Day
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <p className="week-range">

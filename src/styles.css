@@ -685,3 +685,64 @@ h2 { margin-bottom: 0; font-size: 30px; }
     flex: 1;
   }
 }
+.copy-day-card {
+  margin-top: 14px;
+}
+
+.copy-day-controls {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.copy-day-controls strong {
+  align-self: center;
+  margin-right: 6px;
+}
+
+.copy-day-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.copy-day-controls select {
+  min-width: 130px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #d8dbe7;
+  border-radius: 10px;
+  background: white;
+  font: inherit;
+}
+
+.copy-day-arrow {
+  align-self: center;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 650px) {
+  .copy-day-controls {
+    align-items: stretch;
+  }
+
+  .copy-day-controls strong {
+    width: 100%;
+  }
+
+  .copy-day-controls label {
+    flex: 1;
+  }
+
+  .copy-day-controls select {
+    width: 100%;
+  }
+
+  .copy-day-arrow {
+    align-self: end;
+    padding-bottom: 10px;
+  }
+}
