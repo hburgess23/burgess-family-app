@@ -364,46 +364,84 @@ function App() {
       loadCompletions()
     }, [householdId, chores])
 
-    function completeChore(choreId, selectedDate, child) {
+    async function completeChore(choreId, selectedDate, child) {
       const dateStr = getLocalDateString(selectedDate)
       const chore = chores.find((item) => item.id === choreId)
 
-      if (!chore) return
-      if (completions[dateStr] && completions[dateStr][`${choreId}-${child}`]) return
+      if (!chore || !householdId) return
+      if (completions[dateStr]?.[`${choreId}-${child}`]) return
 
-      const completionId = crypto.randomUUID()
+      const { data: childProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('household_id', householdId)
+        .eq('name', child)
+        .eq('role', 'Child')
+        .single()
+
+      if (profileError || !childProfile) {
+        console.error('Could not find child profile:', profileError)
+        return
+      }
+
       const completedAt = new Date().toISOString()
+
+      const { data: savedCompletion, error: completionError } =
+        await supabase
+          .from('chore_completions')
+          .insert({
+            household_id: householdId,
+            chore_id: chore.id,
+            profile_id: childProfile.id,
+            completion_date: dateStr,
+            completed_at: completedAt,
+            points_awarded: chore.points,
+            allowance_cents_awarded: Math.round(chore.allowance * 100),
+          })
+          .select(
+            'id, completion_date, completed_at, points_awarded, allowance_cents_awarded'
+          )
+          .single()
+
+      if (completionError) {
+        console.error('Could not save completion:', completionError)
+        return
+      }
 
       setCompletions((current) => ({
         ...current,
         [dateStr]: {
           ...current[dateStr],
           [`${choreId}-${child}`]: {
-            id: `${completionId}-${child}`,
-            completionId,
-            date: dateStr,
+            id: savedCompletion.id,
+            completionId: savedCompletion.id,
+            date: savedCompletion.completion_date,
             choreId,
             child,
             title: chore.title,
-            points: chore.points,
-            allowance: chore.allowance,
-            completedAt,
+            points: savedCompletion.points_awarded || 0,
+            allowance:
+              (savedCompletion.allowance_cents_awarded || 0) / 100,
+            completedAt: savedCompletion.completed_at,
           },
         },
       }))
 
       setPoints((current) => ({
         ...current,
-        [child]: current[child] + chore.points,
+        [child]:
+          current[child] + (savedCompletion.points_awarded || 0),
       }))
 
       setAllowance((current) => ({
         ...current,
-        [child]: current[child] + chore.allowance,
+        [child]:
+          current[child] +
+          (savedCompletion.allowance_cents_awarded || 0) / 100,
       }))
 
-      // Sound celebration
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      const audioContext =
+        new (window.AudioContext || window.webkitAudioContext)()
       const oscillator = audioContext.createOscillator()
       const gainNode = audioContext.createGain()
 
@@ -411,10 +449,19 @@ function App() {
       gainNode.connect(audioContext.destination)
 
       oscillator.type = 'sine'
-      oscillator.frequency.setValueAtTime(660, audioContext.currentTime)
+      oscillator.frequency.setValueAtTime(
+        660,
+        audioContext.currentTime
+      )
 
-      gainNode.gain.setValueAtTime(0.12, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.35)
+      gainNode.gain.setValueAtTime(
+        0.12,
+        audioContext.currentTime
+      )
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime + 0.35
+      )
 
       oscillator.start()
       oscillator.stop(audioContext.currentTime + 0.35)
@@ -424,37 +471,55 @@ function App() {
         setCelebration(false)
       }, 1500)
     }
-
-    function undoChore(choreId, selectedDate, child) {
+    async function undoChore(choreId, selectedDate, child) {
       const dateStr = getLocalDateString(selectedDate)
-      const chore = chores.find((item) => item.id === choreId)
+      const completion =
+        completions[dateStr]?.[`${choreId}-${child}`]
 
-      if (!chore) return
-      if (!completions[dateStr] || !completions[dateStr][`${choreId}-${child}`]) return
+      if (!completion || !householdId) return
+
+      const { error } = await supabase
+        .from('chore_completions')
+        .delete()
+        .eq('id', completion.id)
+        .eq('household_id', householdId)
+
+      if (error) {
+        console.error('Could not undo completion:', error)
+        return
+      }
 
       setCompletions((current) => {
         const updated = { ...current }
         const dateCompletions = { ...updated[dateStr] }
+
         delete dateCompletions[`${choreId}-${child}`]
+
         if (Object.keys(dateCompletions).length === 0) {
           delete updated[dateStr]
         } else {
           updated[dateStr] = dateCompletions
         }
+
         return updated
       })
 
       setPoints((current) => ({
         ...current,
-        [child]: Math.max(0, current[child] - chore.points),
+        [child]: Math.max(
+          0,
+          current[child] - (completion.points || 0)
+        ),
       }))
 
       setAllowance((current) => ({
         ...current,
-        [child]: Math.max(0, current[child] - chore.allowance),
+        [child]: Math.max(
+          0,
+          current[child] - (completion.allowance || 0)
+        ),
       }))
     }
-
     function isChoreCompletedOnDate(choreId, date, child) {
       const dateStr = getLocalDateString(date)
       return !!completions[dateStr]?.[`${choreId}-${child}`]
