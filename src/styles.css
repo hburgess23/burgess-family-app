@@ -1132,3 +1132,46 @@ h2 { margin-bottom: 0; font-size: 30px; }
     grid-column: auto;
   }
 }
+/* =========================================
+   Clickable cursor + hover feedback
+   ========================================= */
+
+button,
+.clickable-card,
+.more-card,
+.nav-item,
+.avatar,
+.action-button,
+.meal-day-tab,
+.grocery-check {
+  cursor: pointer;
+}
+
+button:disabled,
+.more-card.disabled {
+  cursor: not-allowed;
+}
+
+.clickable-card,
+.more-card,
+.nav-item,
+.avatar,
+.action-button,
+.meal-day-tab {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.clickable-card:hover,
+.more-card:not(.disabled):hover {
+  transform: translateY(-2px);
+}
+
+.action-button:hover:not(:disabled),
+.meal-day-tab:hover:not(.active),
+.nav-item:hover {
+  transform: translateY(-1px);
+}
+
