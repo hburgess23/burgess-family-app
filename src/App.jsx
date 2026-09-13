@@ -150,73 +150,76 @@ function App() {
 }, [session])
     const [chores, setChores] = useState([])
 
-  useEffect(() => {
-    if (!householdId) return
-
-    async function loadChores() {
-      const [
-        { data: choreRows, error: choresError },
-        { data: assignmentRows, error: assignmentsError },
-        { data: profileRows, error: profilesError },
-      ] = await Promise.all([
-        supabase
-          .from('chores')
-          .select('id, title, points, allowance_cents, days')
-          .eq('household_id', householdId)
-          .eq('active', true)
-          .order('created_at', { ascending: true }),
-
-        supabase
-          .from('chore_assignments')
-          .select('chore_id, profile_id')
-          .eq('household_id', householdId),
-
-        supabase
-          .from('profiles')
-          .select('id, name')
-          .eq('household_id', householdId)
-          .eq('active', true),
-      ])
-
-      if (choresError || assignmentsError || profilesError) {
-        console.error(
-          'Could not load chores:',
-          choresError || assignmentsError || profilesError
-        )
-        return
-      }
-
-      const profileNames = Object.fromEntries(
-        (profileRows || []).map((profile) => [profile.id, profile.name])
-      )
-
-      const assignedByChore = {}
-
-      ;(assignmentRows || []).forEach((assignment) => {
-        const name = profileNames[assignment.profile_id]
-
-        if (!name) return
-
-        if (!assignedByChore[assignment.chore_id]) {
-          assignedByChore[assignment.chore_id] = []
-        }
-
-        assignedByChore[assignment.chore_id].push(name)
-      })
-
-      const liveChores = (choreRows || []).map((chore) => ({
-        id: chore.id,
-        title: chore.title,
-        assignedTo: assignedByChore[chore.id] || [],
-        points: chore.points || 0,
-        allowance: (chore.allowance_cents || 0) / 100,
-        days: chore.days || [],
-      }))
-
-      setChores(liveChores)
+  async function refreshChores() {
+    if (!householdId) {
+      setChores([])
+      return
     }
 
-    loadChores()
+    const [
+      { data: choreRows, error: choresError },
+      { data: assignmentRows, error: assignmentsError },
+      { data: profileRows, error: profilesError },
+    ] = await Promise.all([
+      supabase
+        .from('chores')
+        .select('id, title, points, allowance_cents, days, active')
+        .eq('household_id', householdId)
+        .order('created_at', { ascending: true }),
+
+      supabase
+        .from('chore_assignments')
+        .select('chore_id, profile_id')
+        .eq('household_id', householdId),
+
+      supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('household_id', householdId)
+        .eq('active', true),
+    ])
+
+    if (choresError || assignmentsError || profilesError) {
+      console.error(
+        'Could not load chores:',
+        choresError || assignmentsError || profilesError
+      )
+      return
+    }
+
+    const profileNames = Object.fromEntries(
+      (profileRows || []).map((profile) => [profile.id, profile.name])
+    )
+
+    const assignedByChore = {}
+
+    ;(assignmentRows || []).forEach((assignment) => {
+      const name = profileNames[assignment.profile_id]
+
+      if (!name) return
+
+      if (!assignedByChore[assignment.chore_id]) {
+        assignedByChore[assignment.chore_id] = []
+      }
+
+      assignedByChore[assignment.chore_id].push(name)
+    })
+
+    const liveChores = (choreRows || []).map((chore) => ({
+      id: chore.id,
+      title: chore.title,
+      assignedTo: assignedByChore[chore.id] || [],
+      points: chore.points || 0,
+      allowance: (chore.allowance_cents || 0) / 100,
+      days: chore.days || [],
+      active: chore.active !== false,
+    }))
+
+    setChores(liveChores)
+  }
+
+  useEffect(() => {
+    refreshChores()
   }, [householdId])
   const [celebration, setCelebration] = useState(false)
   const [points, setPoints] = useState({
@@ -610,6 +613,8 @@ function App() {
             isChoreCompletedOnDate={isChoreCompletedOnDate}
             getCompletionsByDate={getCompletionsByDate}
             getCompletionsByChild={getCompletionsByChild}
+            refreshChores={refreshChores}
+            householdId={householdId}
           />
         )}
         {active !== 'Today' && active !== 'Chores' && (
@@ -676,13 +681,15 @@ function Chores({
   chores,
   points,
   allowance,
-    completions,
+  completions,
   activeUser,
   completeChore,
   undoChore,
-    isChoreCompletedOnDate,
-    getCompletionsByDate,
-    getCompletionsByChild,
+  isChoreCompletedOnDate,
+  getCompletionsByDate,
+  getCompletionsByChild,
+  refreshChores,
+  householdId,
 }) {
     const [activeTab, setActiveTab] = useState('week')
     const [selectedDate, setSelectedDate] = useState(new Date())
@@ -692,17 +699,242 @@ function Chores({
     const [historyWeekStart, setHistoryWeekStart] = useState(getWeekStart(new Date()))
     const [historyChild, setHistoryChild] = useState('Davina')
     const [summaryPeriod, setSummaryPeriod] = useState('week')
+    const [editingChoreId, setEditingChoreId] = useState(null)
+    const [submitting, setSubmitting] = useState(false)
+    const [formError, setFormError] = useState('')
+    const [formMessage, setFormMessage] = useState('')
+    const [choreForm, setChoreForm] = useState({
+      title: '',
+      assignedTo: [],
+      days: [],
+      points: 0,
+      allowance: 0,
+    })
 
     const isParent = activeUser.role === 'Parent'
     const today = new Date()
     const weekDates = getWeekDates(weekStart)
     const selectedDateStr = getLocalDateString(selectedDate)
     const historySelectedDateStr = getLocalDateString(historySelectedDate)
+    const activeChores = chores.filter((chore) => chore.active !== false)
+    const choreListForManagement = [...chores].sort((a, b) => a.title.localeCompare(b.title))
+
+    const emptyChoreForm = () => ({
+      title: '',
+      assignedTo: [],
+      days: [],
+      points: 0,
+      allowance: 0,
+    })
+
+    function resetChoreForm() {
+      setEditingChoreId(null)
+      setChoreForm(emptyChoreForm())
+      setFormError('')
+      setFormMessage('')
+    }
+
+    function editChore(chore) {
+      setEditingChoreId(chore.id)
+      setChoreForm({
+        title: chore.title,
+        assignedTo: [...(chore.assignedTo || [])],
+        days: [...(chore.days || [])],
+        points: chore.points || 0,
+        allowance: chore.allowance || 0,
+      })
+      setFormError('')
+      setFormMessage('')
+    }
+
+    function toggleAssignment(childName) {
+      setChoreForm((current) => ({
+        ...current,
+        assignedTo: current.assignedTo.includes(childName)
+          ? current.assignedTo.filter((name) => name !== childName)
+          : [...current.assignedTo, childName],
+      }))
+      setFormError('')
+    }
+
+    function toggleDay(dayName) {
+      setChoreForm((current) => ({
+        ...current,
+        days: current.days.includes(dayName)
+          ? current.days.filter((day) => day !== dayName)
+          : [...current.days, dayName],
+      }))
+      setFormError('')
+    }
+
+    async function handleToggleChoreActive(chore) {
+      if (!householdId) return
+
+      const nextActiveState = chore.active === false
+      const { error } = await supabase
+        .from('chores')
+        .update({ active: nextActiveState })
+        .eq('id', chore.id)
+        .eq('household_id', householdId)
+
+      if (error) {
+        setFormError(`Could not ${nextActiveState ? 'enable' : 'disable'} this chore.`)
+        return
+      }
+
+      await refreshChores()
+    }
+
+    async function handleSaveChore(event) {
+      event.preventDefault()
+
+      setFormError('')
+      setFormMessage('')
+
+      const trimmedTitle = choreForm.title.trim()
+      const parsedPoints = Number(choreForm.points)
+      const parsedAllowance = Number(choreForm.allowance)
+
+      if (!trimmedTitle) {
+        setFormError('Please enter a chore name.')
+        return
+      }
+
+      if (choreForm.assignedTo.length === 0) {
+        setFormError('Please assign the chore to at least one child.')
+        return
+      }
+
+      if (choreForm.days.length === 0) {
+        setFormError('Please choose at least one day.')
+        return
+      }
+
+      if (!Number.isFinite(parsedPoints) || parsedPoints < 0) {
+        setFormError('Points must be zero or greater.')
+        return
+      }
+
+      if (!Number.isFinite(parsedAllowance) || parsedAllowance < 0) {
+        setFormError('Allowance must be zero or greater.')
+        return
+      }
+
+      if (!householdId) {
+        setFormError('Household not loaded yet.')
+        return
+      }
+
+      setSubmitting(true)
+
+      const { data: childProfiles, error: childProfilesError } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('household_id', householdId)
+        .in('name', ['Davina', 'Ronin'])
+        .eq('active', true)
+
+      if (childProfilesError || !childProfiles) {
+        console.error('Could not load child profiles:', childProfilesError)
+        setFormError('Could not load child profiles.')
+        setSubmitting(false)
+        return
+      }
+
+      const profileIdMap = Object.fromEntries(
+        (childProfiles || []).map((profile) => [profile.name, profile.id])
+      )
+
+      const selectedProfileIds = choreForm.assignedTo
+        .map((name) => profileIdMap[name])
+        .filter(Boolean)
+
+      if (selectedProfileIds.length !== choreForm.assignedTo.length) {
+        setFormError('One or more selected children could not be found.')
+        setSubmitting(false)
+        return
+      }
+
+      const chorePayload = {
+        title: trimmedTitle,
+        points: parsedPoints,
+        allowance_cents: Math.round(parsedAllowance * 100),
+        days: choreForm.days,
+        household_id: householdId,
+      }
+
+      let choreId = editingChoreId
+
+      try {
+        if (editingChoreId) {
+          const { error: updateChoreError } = await supabase
+            .from('chores')
+            .update({
+              ...chorePayload,
+            })
+            .eq('id', editingChoreId)
+            .eq('household_id', householdId)
+
+          if (updateChoreError) {
+            throw updateChoreError
+          }
+
+          const { error: deleteAssignmentsError } = await supabase
+            .from('chore_assignments')
+            .delete()
+            .eq('chore_id', editingChoreId)
+            .eq('household_id', householdId)
+
+          if (deleteAssignmentsError) {
+            throw deleteAssignmentsError
+          }
+        } else {
+          const { data: insertedChore, error: insertChoreError } = await supabase
+            .from('chores')
+            .insert({
+              ...chorePayload,
+              active: true,
+            })
+            .select('id')
+            .single()
+
+          if (insertChoreError || !insertedChore) {
+            throw insertChoreError || new Error('Could not save chore.')
+          }
+
+          choreId = insertedChore.id
+        }
+
+        const { error: insertAssignmentsError } = await supabase
+          .from('chore_assignments')
+          .insert(
+            selectedProfileIds.map((profileId) => ({
+              household_id: householdId,
+              chore_id: choreId,
+              profile_id: profileId,
+            }))
+          )
+
+        if (insertAssignmentsError) {
+          throw insertAssignmentsError
+        }
+
+        setFormMessage(editingChoreId ? 'Chore updated.' : 'Chore added.')
+        setEditingChoreId(null)
+        setChoreForm(emptyChoreForm())
+        await refreshChores()
+      } catch (error) {
+        console.error('Could not save chore:', error)
+        setFormError('Could not save chore. Please try again.')
+      } finally {
+        setSubmitting(false)
+      }
+    }
 
     // Get chores for each day in week
     const getChoresForDate = (date) => {
       const dayName = getDayName(date)
-      return chores.filter((chore) => chore.days.includes(dayName))
+      return activeChores.filter((chore) => chore.days.includes(dayName))
     }
 
     // Get visible chores for selected date
@@ -756,7 +988,7 @@ function Chores({
 
       datesToCheck.forEach((date) => {
         const dayName = getDayName(date)
-        chores.forEach((chore) => {
+        activeChores.forEach((chore) => {
           if (chore.days.includes(dayName)) {
             chore.assignedTo.forEach((child) => {
               childStats[child].scheduled++
@@ -913,6 +1145,157 @@ function Chores({
                 })
               )}
             </div>
+
+            {isParent && (
+              <div className="card manage-chores">
+                <div className="section-heading manage-header">
+                  <div>
+                    <p className="eyebrow">Parent tools</p>
+                    <h3>Manage Chores</h3>
+                  </div>
+                  <button
+                    className="action-button secondary"
+                    onClick={resetChoreForm}
+                    type="button"
+                  >
+                    {editingChoreId ? 'Cancel edit' : 'Add chore'}
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveChore} className="manage-chores-form">
+                  <div className="form-grid">
+                    <label>
+                      Chore name
+                      <input
+                        type="text"
+                        value={choreForm.title}
+                        onChange={(event) => {
+                          setChoreForm((current) => ({
+                            ...current,
+                            title: event.target.value,
+                          }))
+                          setFormError('')
+                        }}
+                        placeholder="Example: Put toys away"
+                      />
+                    </label>
+
+                    <div className="checkbox-group">
+                      <span>Assign to</span>
+                      {['Davina', 'Ronin'].map((childName) => (
+                        <label key={childName} className="checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={choreForm.assignedTo.includes(childName)}
+                            onChange={() => toggleAssignment(childName)}
+                          />
+                          {childName === 'Davina' ? '👧' : '👦'} {childName}
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="checkbox-group">
+                      <span>Days</span>
+                      {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((dayName) => (
+                        <label key={dayName} className="checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={choreForm.days.includes(dayName)}
+                            onChange={() => toggleDay(dayName)}
+                          />
+                          {dayName.slice(0, 3)}
+                        </label>
+                      ))}
+                    </div>
+
+                    <label>
+                      Points
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={choreForm.points}
+                        onChange={(event) => {
+                          setChoreForm((current) => ({
+                            ...current,
+                            points: Number(event.target.value) || 0,
+                          }))
+                          setFormError('')
+                        }}
+                      />
+                    </label>
+
+                    <label>
+                      Allowance
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={choreForm.allowance}
+                        onChange={(event) => {
+                          setChoreForm((current) => ({
+                            ...current,
+                            allowance: Number(event.target.value) || 0,
+                          }))
+                          setFormError('')
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {formError && <p className="form-message error">{formError}</p>}
+                  {formMessage && <p className="form-message success">{formMessage}</p>}
+
+                  <div className="manage-form-actions">
+                    <button className="action-button" type="submit" disabled={submitting}>
+                      {submitting ? 'Saving…' : editingChoreId ? 'Save chore' : 'Add chore'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="manage-list">
+                  {choreListForManagement.length === 0 ? (
+                    <p>No chores yet.</p>
+                  ) : (
+                    choreListForManagement.map((chore) => (
+                      <div key={chore.id} className={`manage-row ${chore.active === false ? 'inactive' : ''}`}>
+                        <div>
+                          <strong>{chore.title}</strong>
+                          <p>
+                            {chore.assignedTo.length > 0 ? chore.assignedTo.join(', ') : 'No child assigned'}
+                          </p>
+                          <p>
+                            ⭐ {chore.points} points
+                            {chore.allowance > 0 && ` · $${chore.allowance.toFixed(2)} allowance`}
+                          </p>
+                          <p className="repeat-days">
+                            🔁 {chore.days.length === 7
+                              ? 'Every day'
+                              : chore.days.map((day) => day.slice(0, 3)).join(', ')}
+                          </p>
+                        </div>
+                        <div className="manage-actions">
+                          <button
+                            className="action-button secondary"
+                            type="button"
+                            onClick={() => editChore(chore)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="action-button secondary"
+                            type="button"
+                            onClick={() => handleToggleChoreActive(chore)}
+                          >
+                            {chore.active === false ? 'Enable' : 'Disable'}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="card">
               <h3>Current balances</h3>
