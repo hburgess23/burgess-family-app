@@ -746,3 +746,227 @@ h2 { margin-bottom: 0; font-size: 30px; }
     padding-bottom: 10px;
   }
 }
+/* =========================================
+   Meal Favourites
+   ========================================= */
+
+.meal-favorites-card {
+  margin-top: 14px;
+  padding: 20px;
+}
+
+.meal-favorites-header h3 {
+  margin: 2px 0 14px;
+}
+
+.favorite-add-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.favorite-add-form input {
+  flex: 1;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1px solid #d8dbe7;
+  border-radius: 10px;
+  font: inherit;
+}
+
+.favorite-add-form input:focus {
+  outline: 2px solid #4d63ee;
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.favorite-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.favorite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid #dfe2ec;
+  border-radius: 999px;
+  background: #f7f7fc;
+  font-size: 0.88rem;
+}
+
+.favorite-chip button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #e8e9f1;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.favorite-empty {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+.meal-input-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.favorite-select {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid #dfe2ec;
+  border-radius: 9px;
+  background: #f7f7fb;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 600px) {
+  .favorite-add-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .favorite-add-form .action-button {
+    width: 100%;
+  }
+}
+/* =========================================
+   Meals Day Tabs / All Week View
+   ========================================= */
+
+.meal-day-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.meal-day-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  padding: 8px;
+  border: 1px solid #dfe2ec;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  font: inherit;
+}
+
+.meal-day-tab span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.meal-day-tab strong {
+  margin-top: 3px;
+  font-size: 1rem;
+}
+
+.meal-day-tab.active {
+  background: #4d63ee;
+  border-color: #4d63ee;
+  color: white;
+}
+
+.meal-day-tab.all-week {
+  background: #f3f3fa;
+}
+
+.meal-day-tab.all-week.active {
+  background: #4d63ee;
+}
+
+.meal-overview-scroll {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.meal-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(230px, 1fr));
+  gap: 12px;
+  min-width: 1180px;
+}
+
+.meal-overview-day {
+  padding: 16px;
+  border: 1px solid #e1e3ec;
+  border-radius: 16px;
+  background: white;
+}
+
+.meal-overview-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #ececf2;
+}
+
+.meal-overview-heading strong {
+  font-size: 1rem;
+}
+
+.meal-overview-heading span {
+  font-size: 0.8rem;
+  opacity: 0.65;
+}
+
+.meal-overview-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.meal-overview-field {
+  display: grid;
+  gap: 5px;
+}
+
+.meal-overview-field > span {
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.meal-overview-field input {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding: 8px 9px;
+  border: 1px solid #d8dbe7;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.meal-overview-field input:focus {
+  outline: 2px solid #4d63ee;
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+@media (max-width: 700px) {
+  .meal-day-tabs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

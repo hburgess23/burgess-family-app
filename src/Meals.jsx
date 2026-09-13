@@ -43,6 +43,19 @@ export default function Meals({ householdId, activeUser }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [copyFromDay, setCopyFromDay] = useState(0)
   const [copyToDay, setCopyToDay] = useState(1)
+  const [favorites, setFavorites] = useState([])
+  const [newFavorite, setNewFavorite] = useState('')
+  const [favoriteError, setFavoriteError] = useState('')
+  const [savingFavorite, setSavingFavorite] = useState(false)
+
+  const currentDay = new Date().getDay()
+  const defaultWeekdayIndex =
+    currentDay >= 1 && currentDay <= 5 ? currentDay - 1 : 0
+
+  const [selectedDayIndex, setSelectedDayIndex] =
+    useState(defaultWeekdayIndex)
+
+  const [mealView, setMealView] = useState('day')
 
   const isParent = activeUser.role === 'Parent'
 
@@ -153,6 +166,94 @@ export default function Meals({ householdId, activeUser }) {
     setMessage('Meal plan saved.')
   }
 
+  async function loadFavorites() {
+    if (!householdId) return
+
+    const { data, error } = await supabase
+      .from('meal_favorites')
+      .select('id, name')
+      .eq('household_id', householdId)
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Could not load meal favourites:', error)
+      setFavoriteError('Could not load meal favourites.')
+      return
+    }
+
+    setFavorites(data || [])
+    setFavoriteError('')
+  }
+
+  useEffect(() => {
+    loadFavorites()
+  }, [householdId])
+
+  async function addFavorite(event) {
+    event.preventDefault()
+
+    if (!householdId || !isParent) return
+
+    const name = newFavorite.trim()
+
+    if (!name) {
+      setFavoriteError('Enter a meal name.')
+      return
+    }
+
+    setSavingFavorite(true)
+    setFavoriteError('')
+
+    const { error } = await supabase
+      .from('meal_favorites')
+      .insert({
+        household_id: householdId,
+        name,
+      })
+
+    setSavingFavorite(false)
+
+    if (error) {
+      if (error.code === '23505') {
+        setFavoriteError('That meal is already in your favourites.')
+      } else {
+        console.error('Could not save meal favourite:', error)
+        setFavoriteError('Could not save this favourite.')
+      }
+
+      return
+    }
+
+    setNewFavorite('')
+    await loadFavorites()
+  }
+
+  async function removeFavorite(favorite) {
+    if (!householdId || !isParent) return
+
+    if (!window.confirm(`Remove "${favorite.name}" from favourites?`)) {
+      return
+    }
+
+    const { error } = await supabase
+      .from('meal_favorites')
+      .delete()
+      .eq('id', favorite.id)
+      .eq('household_id', householdId)
+
+    if (error) {
+      console.error('Could not remove meal favourite:', error)
+      setFavoriteError('Could not remove this favourite.')
+      return
+    }
+
+    await loadFavorites()
+  }
+
+  function useFavorite(date, type, audience, value) {
+    if (!value) return
+    updateMeal(date, type, audience, value)
+  }
   function copyDay() {
     if (!isParent) return
 
@@ -345,6 +446,98 @@ export default function Meals({ householdId, activeUser }) {
         </button>
       </div>
 
+      <div className="meal-day-tabs">
+        {mealDates.map((date, index) => (
+          <button
+            key={getLocalDateString(date)}
+            type="button"
+            className={
+              mealView === 'day' && selectedDayIndex === index
+                ? 'meal-day-tab active'
+                : 'meal-day-tab'
+            }
+            onClick={() => {
+              setSelectedDayIndex(index)
+              setMealView('day')
+            }}
+          >
+            <span>{getDayName(date).slice(0, 3)}</span>
+            <strong>{date.getDate()}</strong>
+          </button>
+        ))}
+
+        <button
+          type="button"
+          className={
+            mealView === 'all'
+              ? 'meal-day-tab all-week active'
+              : 'meal-day-tab all-week'
+          }
+          onClick={() => setMealView('all')}
+        >
+          <span>All</span>
+          <strong>Week</strong>
+        </button>
+      </div>
+
+      {isParent && (
+        <div className="card meal-favorites-card">
+          <div className="meal-favorites-header">
+            <div>
+              <p className="eyebrow">Quick meals</p>
+              <h3>Meal Favourites</h3>
+            </div>
+          </div>
+
+          <form className="favorite-add-form" onSubmit={addFavorite}>
+            <input
+              type="text"
+              value={newFavorite}
+              placeholder="Example: Cheese sandwich"
+              onChange={(event) => {
+                setNewFavorite(event.target.value)
+                setFavoriteError('')
+              }}
+            />
+
+            <button
+              className="action-button"
+              type="submit"
+              disabled={savingFavorite}
+            >
+              {savingFavorite ? 'Adding…' : 'Add Favourite'}
+            </button>
+          </form>
+
+          {favoriteError && (
+            <p className="form-message error">{favoriteError}</p>
+          )}
+
+          {favorites.length === 0 ? (
+            <p className="favorite-empty">
+              No favourites yet. Add meals you use often.
+            </p>
+          ) : (
+            <div className="favorite-chips">
+              {favorites.map((favorite) => (
+                <div className="favorite-chip" key={favorite.id}>
+                  <span>{favorite.name}</span>
+
+                  <button
+                    type="button"
+                    aria-label={`Remove ${favorite.name}`}
+                    title="Remove favourite"
+                    onClick={() => removeFavorite(favorite)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {isParent && (
         <div className="card copy-day-card">
           <div className="copy-day-controls">
@@ -413,52 +606,134 @@ export default function Meals({ householdId, activeUser }) {
         <div className="card">
           <p>Loading meals…</p>
         </div>
-      ) : (
-        <div className="meal-week-grid">
-          {mealDates.map((date) => (
-            <article
-              className="card meal-day-card"
-              key={getLocalDateString(date)}
-            >
-              <div className="card-title">
-                <span>🍽️</span>
-                <h3>{getDayName(date)} · {formatDate(date)}</h3>
-              </div>
+      ) : mealView === 'day' ? (
+        <article className="card meal-day-card">
+          <div className="card-title">
+            <span>🍽️</span>
+            <h3>
+              {getDayName(mealDates[selectedDayIndex])} ·{' '}
+              {formatDate(mealDates[selectedDayIndex])}
+            </h3>
+          </div>
 
-              <div className="meal-fields">
-                {visibleSlots.map((slot) => {
-                  const key = mealKey(date, slot.type, slot.audience)
-                  const value = mealValues[key] || ''
+          <div className="meal-fields">
+            {visibleSlots.map((slot) => {
+              const date = mealDates[selectedDayIndex]
+              const key = mealKey(date, slot.type, slot.audience)
+              const value = mealValues[key] || ''
 
-                  return (
-                    <label className="meal-field" key={key}>
-                      <span>{slot.label}</span>
+              return (
+                <label className="meal-field" key={key}>
+                  <span>{slot.label}</span>
 
-                      {isParent ? (
-                        <input
-                          type="text"
-                          value={value}
-                          placeholder="Add meal..."
+                  {isParent ? (
+                    <div className="meal-input-stack">
+                      <input
+                        type="text"
+                        value={value}
+                        placeholder="Add meal..."
+                        onChange={(event) =>
+                          updateMeal(
+                            date,
+                            slot.type,
+                            slot.audience,
+                            event.target.value
+                          )
+                        }
+                      />
+
+                      {favorites.length > 0 && (
+                        <select
+                          className="favorite-select"
+                          value=""
                           onChange={(event) =>
-                            updateMeal(
+                            useFavorite(
                               date,
                               slot.type,
                               slot.audience,
                               event.target.value
                             )
                           }
-                        />
-                      ) : (
-                        <div className="meal-readonly">
-                          {value || 'Not planned yet'}
-                        </div>
+                        >
+                          <option value="">Use favourite…</option>
+
+                          {favorites.map((favorite) => (
+                            <option
+                              value={favorite.name}
+                              key={favorite.id}
+                            >
+                              {favorite.name}
+                            </option>
+                          ))}
+                        </select>
                       )}
-                    </label>
-                  )
-                })}
-              </div>
-            </article>
-          ))}
+                    </div>
+                  ) : (
+                    <div className="meal-readonly">
+                      {value || 'Not planned yet'}
+                    </div>
+                  )}
+                </label>
+              )
+            })}
+          </div>
+        </article>
+      ) : (
+        <div className="meal-overview-scroll">
+          <div className="meal-overview-grid">
+            {mealDates.map((date) => (
+              <article
+                className="meal-overview-day"
+                key={getLocalDateString(date)}
+              >
+                <div className="meal-overview-heading">
+                  <strong>{getDayName(date)}</strong>
+                  <span>{formatDate(date)}</span>
+                </div>
+
+                <div className="meal-overview-fields">
+                  {visibleSlots.map((slot) => {
+                    const key = mealKey(
+                      date,
+                      slot.type,
+                      slot.audience
+                    )
+
+                    const value = mealValues[key] || ''
+
+                    return (
+                      <label
+                        className="meal-overview-field"
+                        key={key}
+                      >
+                        <span>{slot.label}</span>
+
+                        {isParent ? (
+                          <input
+                            type="text"
+                            value={value}
+                            placeholder="Add meal..."
+                            onChange={(event) =>
+                              updateMeal(
+                                date,
+                                slot.type,
+                                slot.audience,
+                                event.target.value
+                              )
+                            }
+                          />
+                        ) : (
+                          <div className="meal-readonly">
+                            {value || 'Not planned yet'}
+                          </div>
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       )}
     </section>
