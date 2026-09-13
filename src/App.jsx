@@ -119,6 +119,66 @@ function App() {
 
   const [active, setActive] = useState('Today')
   const [activeUser, setActiveUser] = useState(family[0])
+  const [pendingParent, setPendingParent] = useState(null)
+  const [parentPin, setParentPin] = useState('')
+  const [parentPinError, setParentPinError] = useState('')
+  const [verifyingParentPin, setVerifyingParentPin] = useState(false)
+
+  function handleProfileClick(person) {
+    if (person.role === 'Child') {
+      setActiveUser(person)
+      setPendingParent(null)
+      setParentPin('')
+      setParentPinError('')
+      return
+    }
+
+    if (activeUser.role === 'Parent') {
+      setActiveUser(person)
+      return
+    }
+
+    setPendingParent(person)
+    setParentPin('')
+    setParentPinError('')
+  }
+
+  async function handleVerifyParentPin(event) {
+    event.preventDefault()
+
+    if (!householdId || !pendingParent) return
+
+    if (!/^[0-9]{4}$/.test(parentPin)) {
+      setParentPinError('Enter the 4-digit Parent PIN.')
+      return
+    }
+
+    setVerifyingParentPin(true)
+    setParentPinError('')
+
+    const { data, error } = await supabase.rpc('verify_parent_pin', {
+      target_household: householdId,
+      candidate_pin: parentPin,
+    })
+
+    setParentPin('')
+    setVerifyingParentPin(false)
+
+    if (error) {
+      console.error('Could not verify Parent PIN:', error)
+      setParentPinError('Could not verify the PIN. Please try again.')
+      return
+    }
+
+    if (data !== true) {
+      setParentPinError('Incorrect Parent PIN.')
+      return
+    }
+
+    setActiveUser(pendingParent)
+    setPendingParent(null)
+    setParentPinError('')
+  }
   useEffect(() => {
   if (!session?.user) {
     setHouseholdId(null)
@@ -568,6 +628,64 @@ function App() {
             🎉 Great job!
           </div>
         )}
+      {pendingParent && (
+        <div className="pin-backdrop">
+          <form className="pin-dialog" onSubmit={handleVerifyParentPin}>
+            <div className="pin-icon">🔒</div>
+            <p className="eyebrow">Parent access</p>
+            <h2>Enter Parent PIN</h2>
+            <p>
+              Enter the shared PIN to switch to {pendingParent.name}.
+            </p>
+
+            <input
+              className="pin-input"
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]{4}"
+              maxLength="4"
+              value={parentPin}
+              onChange={(event) => {
+                const value = event.target.value
+                  .replace(/\D/g, '')
+                  .slice(0, 4)
+
+                setParentPin(value)
+                setParentPinError('')
+              }}
+              autoFocus
+              aria-label="Parent PIN"
+            />
+
+            {parentPinError && (
+              <p className="form-message error">{parentPinError}</p>
+            )}
+
+            <div className="pin-actions">
+              <button
+                className="action-button secondary"
+                type="button"
+                onClick={() => {
+                  setPendingParent(null)
+                  setParentPin('')
+                  setParentPinError('')
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="action-button"
+                type="submit"
+                disabled={verifyingParentPin}
+              >
+                {verifyingParentPin ? 'Checking…' : 'Unlock'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <header className="topbar">
         <div>
           <p className="eyebrow">Welcome home</p>
@@ -584,7 +702,7 @@ function App() {
                   : 'avatar'
               }
   title={`${person.name} · ${person.role}`}
-  onClick={() => setActiveUser(person)}
+  onClick={() => handleProfileClick(person)}
             >
               <span>{person.emoji}</span>
               <small>{person.name}</small>

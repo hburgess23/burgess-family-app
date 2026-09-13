@@ -553,7 +553,7 @@ h2 { margin-bottom: 0; font-size: 30px; }
 }
 
 .manage-row.inactive strong::after {
-  content: ' · Inactive';
+  content: ' Â· Inactive';
   font-size: 0.78rem;
   font-weight: 500;
 }
@@ -594,4 +594,3 @@ h2 { margin-bottom: 0; font-size: 30px; }
     width: 100%;
   }
 }
-
