@@ -231,9 +231,13 @@ export default function Meals({ householdId, activeUser }) {
   async function removeFavorite(favorite) {
     if (!householdId || !isParent) return
 
-    if (!window.confirm(`Remove "${favorite.name}" from favourites?`)) {
-      return
-    }
+    setFavoriteError('')
+
+    const previousFavorites = favorites
+
+    setFavorites((current) =>
+      current.filter((item) => item.id !== favorite.id)
+    )
 
     const { error } = await supabase
       .from('meal_favorites')
@@ -243,11 +247,9 @@ export default function Meals({ householdId, activeUser }) {
 
     if (error) {
       console.error('Could not remove meal favourite:', error)
+      setFavorites(previousFavorites)
       setFavoriteError('Could not remove this favourite.')
-      return
     }
-
-    await loadFavorites()
   }
 
   function useFavorite(date, type, audience, value) {
