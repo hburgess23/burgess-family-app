@@ -4,6 +4,7 @@ import Meals from './Meals'
 import More from './More'
 import Grocery from './Grocery'
 import Rewards from './Rewards'
+import Messages from './Messages'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -760,6 +761,13 @@ function App() {
           />
         )}
 
+        {active === 'Messages' && (
+          <Messages
+            householdId={householdId}
+            activeUser={activeUser}
+          />
+        )}
+
         {active === 'More' && (
           <More
             householdId={householdId}
@@ -767,7 +775,7 @@ function App() {
           />
         )}
 
-        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && active !== 'Grocery' && active !== 'Rewards' && active !== 'More' && (
+        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && active !== 'Grocery' && active !== 'Rewards' && active !== 'Messages' && active !== 'More' && (
           <Placeholder title={active} />
         )}
       </main>
@@ -833,7 +841,7 @@ function Today({ points, setActive }) {
           <p>Family reminders will appear here.</p>
         </Card>
 
-        <Card title="Messages" icon="💬" onClick={() => setActive('More')}>
+        <Card title="Messages" icon="💬" onClick={() => setActive('Messages')}>
           <p>Your family group chat will appear here.</p>
         </Card>
       </div>
