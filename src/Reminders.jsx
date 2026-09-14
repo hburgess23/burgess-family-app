@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { isReminderDueOnDate } from './reminderUtils'
 
 const weekDays = [
   'Sunday',
@@ -238,6 +239,9 @@ export default function Reminders({ householdId, activeUser }) {
     return 'One time'
   }
 
+  const todaysReminders = reminders.filter((reminder) =>
+    isReminderDueOnDate(reminder)
+  )
   function creatorFor(reminder) {
     return profiles.find(
       (profile) =>
@@ -258,6 +262,41 @@ export default function Reminders({ householdId, activeUser }) {
         </div>
       </div>
 
+      <div className="card reminder-today-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Today</p>
+            <h3>Due Today</h3>
+          </div>
+
+          <strong>{todaysReminders.length}</strong>
+        </div>
+
+        {todaysReminders.length === 0 ? (
+          <p>No reminders due today.</p>
+        ) : (
+          <div className="reminder-today-list">
+            {todaysReminders.map((reminder) => (
+              <div
+                className="reminder-today-item"
+                key={reminder.id}
+              >
+                <span>🔔</span>
+
+                <div>
+                  <strong>{reminder.title}</strong>
+
+                  {reminder.reminder_time && (
+                    <small>
+                      {reminder.reminder_time.slice(0, 5)}
+                    </small>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="card reminder-form-card">
         <div className="section-heading">
           <div>
