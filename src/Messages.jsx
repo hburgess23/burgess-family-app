@@ -77,6 +77,41 @@ export default function Messages({ householdId, activeUser }) {
     startMessages()
   }, [householdId])
 
+  useEffect(() => {
+    if (!householdId) return
+
+    const channel = supabase
+      .channel(`family-messages-realtime-${householdId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'family_messages',
+          filter: `household_id=eq.${householdId}`,
+        },
+        (payload) => {
+          const newMessage = payload.new
+
+          setMessages((current) => {
+            if (
+              current.some(
+                (message) => message.id === newMessage.id
+              )
+            ) {
+              return current
+            }
+
+            return [...current, newMessage]
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [householdId])
   async function sendMessage(event) {
     event.preventDefault()
 
@@ -114,7 +149,13 @@ export default function Messages({ householdId, activeUser }) {
       return
     }
 
-    setMessages((current) => [...current, data])
+    setMessages((current) => {
+      if (current.some((message) => message.id === data.id)) {
+        return current
+      }
+
+      return [...current, data]
+    })
     setMessageText('')
   }
 
