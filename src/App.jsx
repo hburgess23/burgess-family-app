@@ -5,6 +5,7 @@ import More from './More'
 import Grocery from './Grocery'
 import Rewards from './Rewards'
 import Messages from './Messages'
+import Reminders from './Reminders'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -768,6 +769,13 @@ function App() {
           />
         )}
 
+        {active === 'Reminders' && (
+          <Reminders
+            householdId={householdId}
+            activeUser={activeUser}
+          />
+        )}
+
         {active === 'More' && (
           <More
             householdId={householdId}
@@ -775,7 +783,7 @@ function App() {
           />
         )}
 
-        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && active !== 'Grocery' && active !== 'Rewards' && active !== 'Messages' && active !== 'More' && (
+        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && active !== 'Grocery' && active !== 'Rewards' && active !== 'Messages' && active !== 'Reminders' && active !== 'More' && (
           <Placeholder title={active} />
         )}
       </main>
@@ -837,7 +845,7 @@ function Today({ points, setActive }) {
           <p>Spend points on family rewards and treats.</p>
         </Card>
 
-        <Card title="Reminders" icon="🔔" onClick={() => setActive('More')}>
+        <Card title="Reminders" icon="🔔" onClick={() => setActive('Reminders')}>
           <p>Family reminders will appear here.</p>
         </Card>
 

@@ -2,10 +2,29 @@ import React, { useState } from 'react'
 import Grocery from './Grocery'
 import Rewards from './Rewards'
 import Messages from './Messages'
+import Reminders from './Reminders'
 
 export default function More({ householdId, activeUser }) {
   const [section, setSection] = useState('menu')
 
+  if (section === 'reminders') {
+    return (
+      <section className="page">
+        <button
+          className="action-button secondary more-back-button"
+          type="button"
+          onClick={() => setSection('menu')}
+        >
+          ← More
+        </button>
+
+        <Reminders
+          householdId={householdId}
+          activeUser={activeUser}
+        />
+      </section>
+    )
+  }
   if (section === 'messages') {
     return (
       <section className="page">
@@ -104,6 +123,17 @@ export default function More({ householdId, activeUser }) {
           <div>
             <h3>Messages</h3>
             <p>Family group chat</p>
+          </div>
+        </button>
+        <button
+          className="card more-card"
+          type="button"
+          onClick={() => setSection('reminders')}
+        >
+          <span className="more-card-icon">🔔</span>
+          <div>
+            <h3>Reminders</h3>
+            <p>Family reminders and repeating schedules</p>
           </div>
         </button>
 
