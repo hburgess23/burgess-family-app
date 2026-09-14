@@ -3,10 +3,29 @@ import Grocery from './Grocery'
 import Rewards from './Rewards'
 import Messages from './Messages'
 import Reminders from './Reminders'
+import Settings from './Settings'
 
 export default function More({ householdId, activeUser }) {
   const [section, setSection] = useState('menu')
 
+  if (section === 'settings') {
+    return (
+      <section className="page">
+        <button
+          className="action-button secondary more-back-button"
+          type="button"
+          onClick={() => setSection('menu')}
+        >
+          ← More
+        </button>
+
+        <Settings
+          householdId={householdId}
+          activeUser={activeUser}
+        />
+      </section>
+    )
+  }
   if (section === 'reminders') {
     return (
       <section className="page">
@@ -137,11 +156,15 @@ export default function More({ householdId, activeUser }) {
           </div>
         </button>
 
-        <button className="card more-card disabled" type="button" disabled>
+        <button
+          className="card more-card"
+          type="button"
+          onClick={() => setSection('settings')}
+        >
           <span className="more-card-icon">⚙️</span>
           <div>
             <h3>Settings</h3>
-            <p>Coming next</p>
+            <p>Quiet hours and household preferences</p>
           </div>
         </button>
       </div>

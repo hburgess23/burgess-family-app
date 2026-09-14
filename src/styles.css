@@ -1359,3 +1359,42 @@ button:disabled,
   }
 }
 
+
+/* Settings */
+.settings-page .card {
+  margin-top: 1rem;
+}
+
+.settings-page form {
+  margin-top: 1rem;
+}
+
+.settings-page .reminder-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.settings-page .reminder-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.settings-page .reminder-form input[type="time"] {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.55rem 0.7rem;
+}
+
+@media (max-width: 700px) {
+  .settings-page .reminder-form {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page .reminder-form .action-button {
+    width: 100%;
+  }
+}
