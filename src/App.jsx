@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { isReminderDueOnDate } from './reminderUtils'
 import Meals from './Meals'
 import More from './More'
 import Grocery from './Grocery'
@@ -724,7 +725,7 @@ function App() {
       </header>
 
       <main>
-        {active === 'Today' && <Today points={points} setActive={setActive} />}
+        {active === 'Today' && <Today points={points} setActive={setActive} householdId={householdId} />}
         {active === 'Chores' && (
           <Chores
             chores={chores}
@@ -804,7 +805,47 @@ function App() {
   )
 }
 
-function Today({ points, setActive }) {
+function Today({ points, setActive, householdId }) {
+  const [todayReminders, setTodayReminders] = useState([])
+
+  useEffect(() => {
+    if (!householdId) return
+
+    let cancelled = false
+
+    async function loadTodayReminders() {
+      const { data, error } = await supabase
+        .from('family_reminders')
+        .select(
+          'id, title, reminder_date, reminder_time, repeat_type, repeat_days, active'
+        )
+        .eq('household_id', householdId)
+        .eq('active', true)
+
+      if (error) {
+        console.error('Could not load Today reminders:', error)
+        return
+      }
+
+      const dueToday = (data || [])
+        .filter((reminder) => isReminderDueOnDate(reminder))
+        .sort((a, b) =>
+          (a.reminder_time || '99:99').localeCompare(
+            b.reminder_time || '99:99'
+          )
+        )
+
+      if (!cancelled) {
+        setTodayReminders(dueToday)
+      }
+    }
+
+    loadTodayReminders()
+
+    return () => {
+      cancelled = true
+    }
+  }, [householdId])
   return (
     <section className="page">
       <div className="section-heading">
@@ -845,9 +886,30 @@ function Today({ points, setActive }) {
           <p>Spend points on family rewards and treats.</p>
         </Card>
 
-        <Card title="Reminders" icon="🔔" onClick={() => setActive('Reminders')}>
-          <p>Family reminders will appear here.</p>
-        </Card>
+        <Card
+        title="Reminders"
+        icon="🔔"
+        onClick={() => setActive('Reminders')}
+      >
+        {todayReminders.length === 0 ? (
+          <p>No reminders due today.</p>
+        ) : (
+          <div className="today-reminders-preview">
+            {todayReminders.slice(0, 3).map((reminder) => (
+              <p key={reminder.id}>
+                🔔 <strong>{reminder.title}</strong>
+                {reminder.reminder_time
+                  ? ` · ${reminder.reminder_time.slice(0, 5)}`
+                  : ''}
+              </p>
+            ))}
+
+            {todayReminders.length > 3 && (
+              <p>+{todayReminders.length - 3} more today</p>
+            )}
+          </div>
+        )}
+      </Card>
 
         <Card title="Messages" icon="💬" onClick={() => setActive('Messages')}>
           <p>Your family group chat will appear here.</p>
