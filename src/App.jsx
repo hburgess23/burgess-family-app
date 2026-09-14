@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import Meals from './Meals'
 import More from './More'
 import Grocery from './Grocery'
+import Rewards from './Rewards'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -752,6 +753,13 @@ function App() {
           />
         )}
 
+        {active === 'Rewards' && (
+          <Rewards
+            householdId={householdId}
+            activeUser={activeUser}
+          />
+        )}
+
         {active === 'More' && (
           <More
             householdId={householdId}
@@ -759,7 +767,7 @@ function App() {
           />
         )}
 
-        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && active !== 'Grocery' && active !== 'More' && (
+        {active !== 'Today' && active !== 'Chores' && active !== 'Meals' && active !== 'Grocery' && active !== 'Rewards' && active !== 'More' && (
           <Placeholder title={active} />
         )}
       </main>
@@ -812,6 +820,13 @@ function Today({ points, setActive }) {
           onClick={() => setActive('Grocery')}
         >
           <p>Add items and keep the family shopping list up to date.</p>
+        </Card>
+        <Card
+          title="Rewards"
+          icon="🎁"
+          onClick={() => setActive('Rewards')}
+        >
+          <p>Spend points on family rewards and treats.</p>
         </Card>
 
         <Card title="Reminders" icon="🔔" onClick={() => setActive('More')}>

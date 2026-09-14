@@ -1,9 +1,28 @@
 import React, { useState } from 'react'
 import Grocery from './Grocery'
+import Rewards from './Rewards'
 
 export default function More({ householdId, activeUser }) {
   const [section, setSection] = useState('menu')
 
+  if (section === 'rewards') {
+    return (
+      <section className="page">
+        <button
+          className="action-button secondary more-back-button"
+          type="button"
+          onClick={() => setSection('menu')}
+        >
+          ← More
+        </button>
+
+        <Rewards
+          householdId={householdId}
+          activeUser={activeUser}
+        />
+      </section>
+    )
+  }
   if (section === 'grocery') {
     return (
       <section className="page">
@@ -45,11 +64,15 @@ export default function More({ householdId, activeUser }) {
           </div>
         </button>
 
-        <button className="card more-card disabled" type="button" disabled>
+        <button
+          className="card more-card"
+          type="button"
+          onClick={() => setSection('rewards')}
+        >
           <span className="more-card-icon">🎁</span>
           <div>
             <h3>Rewards</h3>
-            <p>Coming next</p>
+            <p>Spend points in the family reward shop</p>
           </div>
         </button>
 
