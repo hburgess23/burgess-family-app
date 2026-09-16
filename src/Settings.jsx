@@ -15,6 +15,7 @@ export default function Settings({ householdId, activeUser }) {
   )
   const [notificationStatus, setNotificationStatus] = useState('')
   const [notificationError, setNotificationError] = useState('')
+  const [pushStatus, setPushStatus] = useState('')
 
   const isParent = activeUser.role === 'Parent'
 
@@ -99,6 +100,170 @@ export default function Settings({ householdId, activeUser }) {
     setMessage('Settings saved.')
   }
 
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat(
+      (4 - (base64String.length % 4)) % 4
+    )
+
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+
+    const rawData = window.atob(base64)
+
+    return Uint8Array.from(
+      [...rawData].map((character) =>
+        character.charCodeAt(0)
+      )
+    )
+  }
+
+  async function enablePushNotifications() {
+    setPushStatus('')
+    setNotificationError('')
+
+    const publicKey =
+      import.meta.env.VITE_VAPID_PUBLIC_KEY
+
+    if (!publicKey) {
+      setNotificationError(
+        'Push public key is not configured.'
+      )
+      return
+    }
+
+    if (
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
+      setNotificationError(
+        'Push notifications are not supported by this browser.'
+      )
+      return
+    }
+
+    try {
+      setPushStatus('Enabling push notifications…')
+
+      await navigator.serviceWorker.register('/sw.js')
+
+      const registration =
+        await navigator.serviceWorker.ready
+
+      let permission = Notification.permission
+
+      if (permission !== 'granted') {
+        permission =
+          await Notification.requestPermission()
+      }
+
+      setNotificationPermission(permission)
+
+      if (permission !== 'granted') {
+        setPushStatus('')
+        setNotificationError(
+          'Notification permission is required.'
+        )
+        return
+      }
+
+      let subscription =
+        await registration.pushManager.getSubscription()
+
+      if (!subscription) {
+        subscription =
+          await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey:
+              urlBase64ToUint8Array(publicKey),
+          })
+      }
+
+      const json = subscription.toJSON()
+
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert(
+          {
+            household_id: householdId,
+            endpoint: subscription.endpoint,
+            p256dh: json.keys?.p256dh,
+            auth_key: json.keys?.auth,
+            user_agent: navigator.userAgent,
+            active: true,
+            updated_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'endpoint',
+          }
+        )
+
+      if (error) {
+        throw error
+      }
+
+      setPushStatus(
+        'Push notifications enabled on this device.'
+      )
+    } catch (error) {
+      console.error(
+        'Could not enable push notifications:',
+        error
+      )
+
+      setPushStatus('')
+      setNotificationError(
+        `Could not enable push notifications: ${
+          error.message || 'Unknown error'
+        }`
+      )
+    }
+  }
+  async function testClosedAppPush() {
+    setPushStatus('')
+    setNotificationError('')
+
+    try {
+      setPushStatus('Sending closed-app push…')
+
+      const { data, error } =
+        await supabase.functions.invoke(
+          'send-push-test',
+          {
+            body: {
+              householdId,
+            },
+          }
+        )
+
+      if (error) {
+        throw error
+      }
+
+      if (!data?.ok) {
+        throw new Error(
+          data?.error || 'Push test failed'
+        )
+      }
+
+      setPushStatus(
+        `Push sent to ${data.sent} device(s).`
+      )
+    } catch (error) {
+      console.error(
+        'Closed-app push test failed:',
+        error
+      )
+
+      setPushStatus('')
+      setNotificationError(
+        `Closed-app push failed: ${
+          error.message || 'Unknown error'
+        }`
+      )
+    }
+  }
   async function testNotifications() {
     setNotificationStatus('')
     setNotificationError('')
@@ -263,6 +428,28 @@ export default function Settings({ householdId, activeUser }) {
 
         <button
           className="action-button"
+          type="button"
+          onClick={enablePushNotifications}
+        >
+          Enable Push Notifications
+        </button>
+
+        {pushStatus && (
+          <p className="form-message success">
+            {pushStatus}
+          </p>
+        )}
+
+        <button
+          className="action-button secondary"
+          type="button"
+          onClick={testClosedAppPush}
+        >
+          Test Closed-App Push
+        </button>
+
+        <button
+          className="action-button secondary"
           type="button"
           onClick={testNotifications}
         >
