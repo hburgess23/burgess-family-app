@@ -8,6 +8,13 @@ export default function Settings({ householdId, activeUser }) {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [notificationPermission, setNotificationPermission] = useState(
+    typeof Notification === 'undefined'
+      ? 'unsupported'
+      : Notification.permission
+  )
+  const [notificationStatus, setNotificationStatus] = useState('')
+  const [notificationError, setNotificationError] = useState('')
 
   const isParent = activeUser.role === 'Parent'
 
@@ -92,6 +99,62 @@ export default function Settings({ householdId, activeUser }) {
     setMessage('Settings saved.')
   }
 
+  async function testNotifications() {
+    setNotificationStatus('')
+    setNotificationError('')
+
+    if (
+      !('Notification' in window) ||
+      !('serviceWorker' in navigator)
+    ) {
+      setNotificationError(
+        'Notifications are not supported by this browser.'
+      )
+      return
+    }
+
+    try {
+      setNotificationStatus('Preparing notification…')
+
+      await navigator.serviceWorker.register('/sw.js')
+
+      const registration =
+        await navigator.serviceWorker.ready
+
+      const permission =
+        Notification.permission === 'granted'
+          ? 'granted'
+          : await Notification.requestPermission()
+
+      setNotificationPermission(permission)
+
+      if (permission !== 'granted') {
+        setNotificationStatus('')
+        setNotificationError(
+          permission === 'denied'
+            ? 'Notifications are blocked for this site.'
+            : 'Notification permission was not enabled.'
+        )
+        return
+      }
+
+      await registration.showNotification(
+        'Burgess Family App',
+        {
+          body: 'Notifications are working on this device.',
+          tag: 'burgess-family-notification-test',
+        }
+      )
+
+      setNotificationStatus('Test notification sent.')
+    } catch (error) {
+      console.error('Notification test failed:', error)
+      setNotificationStatus('')
+      setNotificationError(
+        `Notification test failed: ${error.message || 'Unknown error'}`
+      )
+    }
+  }
   return (
     <section className="settings-page">
       <div className="section-heading">
@@ -176,6 +239,46 @@ export default function Settings({ householdId, activeUser }) {
 
         {message && (
           <p className="form-message success">{message}</p>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">This device</p>
+            <h3>Notifications</h3>
+          </div>
+
+          <span>🔔</span>
+        </div>
+
+        <p>
+          Enable notifications on this device so family reminders
+          and messages can alert you later.
+        </p>
+
+        <p className="reminder-note">
+          Permission: <strong>{notificationPermission}</strong>
+        </p>
+
+        <button
+          className="action-button"
+          type="button"
+          onClick={testNotifications}
+        >
+          Test Notification
+        </button>
+
+        {notificationStatus && (
+          <p className="form-message success">
+            {notificationStatus}
+          </p>
+        )}
+
+        {notificationError && (
+          <p className="form-message error">
+            {notificationError}
+          </p>
         )}
       </div>
     </section>
