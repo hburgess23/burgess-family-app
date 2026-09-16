@@ -131,6 +131,146 @@ function App() {
   const [parentPinError, setParentPinError] = useState('')
   const [verifyingParentPin, setVerifyingParentPin] = useState(false)
 
+  useEffect(() => {
+    if (!householdId) return
+
+    let cancelled = false
+
+    function timeString(date) {
+      return `${String(date.getHours()).padStart(2, '0')}:${String(
+        date.getMinutes()
+      ).padStart(2, '0')}`
+    }
+
+    function dateString(date) {
+      return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+      ].join('-')
+    }
+
+    function isQuietTime(now, start, end) {
+      const current = timeString(now)
+      const quietStart = (start || '22:00').slice(0, 5)
+      const quietEnd = (end || '08:00').slice(0, 5)
+
+      if (quietStart === quietEnd) return false
+
+      if (quietStart < quietEnd) {
+        return current >= quietStart && current < quietEnd
+      }
+
+      return current >= quietStart || current < quietEnd
+    }
+
+    async function checkReminderNotifications() {
+      if (cancelled) return
+
+      if (
+        !('Notification' in window) ||
+        !('serviceWorker' in navigator) ||
+        Notification.permission !== 'granted'
+      ) {
+        return
+      }
+
+      const now = new Date()
+
+      const [settingsResult, remindersResult] = await Promise.all([
+        supabase
+          .from('household_settings')
+          .select('quiet_hours_start, quiet_hours_end')
+          .eq('household_id', householdId)
+          .maybeSingle(),
+
+        supabase
+          .from('family_reminders')
+          .select(
+            'id, title, reminder_date, reminder_time, repeat_type, repeat_days, active'
+          )
+          .eq('household_id', householdId)
+          .eq('active', true),
+      ])
+
+      if (cancelled) return
+
+      if (settingsResult.error) {
+        console.error(
+          'Could not load notification settings:',
+          settingsResult.error
+        )
+        return
+      }
+
+      if (remindersResult.error) {
+        console.error(
+          'Could not load reminders for notifications:',
+          remindersResult.error
+        )
+        return
+      }
+
+      const settings = settingsResult.data || {}
+
+      if (
+        isQuietTime(
+          now,
+          settings.quiet_hours_start,
+          settings.quiet_hours_end
+        )
+      ) {
+        return
+      }
+
+      const currentTime = timeString(now)
+      const today = dateString(now)
+
+      const dueReminders = (remindersResult.data || []).filter(
+        (reminder) =>
+          reminder.reminder_time &&
+          reminder.reminder_time.slice(0, 5) === currentTime &&
+          isReminderDueOnDate(reminder, now)
+      )
+
+      if (dueReminders.length === 0) return
+
+      const registration = await navigator.serviceWorker.ready
+
+      for (const reminder of dueReminders) {
+        const storageKey =
+          `burgess-reminder-notified-${reminder.id}-${today}-${currentTime}`
+
+        if (localStorage.getItem(storageKey)) continue
+
+        await registration.showNotification('Burgess Family Reminder', {
+          body: reminder.title,
+          tag: `family-reminder-${reminder.id}-${today}-${currentTime}`,
+          data: {
+            reminderId: reminder.id,
+          },
+        })
+
+        localStorage.setItem(
+          storageKey,
+          new Date().toISOString()
+        )
+      }
+    }
+
+    checkReminderNotifications()
+
+    const timer = window.setInterval(
+      checkReminderNotifications,
+      30000
+    )
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [householdId])
+
   function handleProfileClick(person) {
     if (person.role === 'Child') {
       setActiveUser(person)
