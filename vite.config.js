@@ -8,6 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [],
+      workbox: {
+        importScripts: ['push-sw.js']
+      },
       manifest: {
         name: 'The Burgess Family App',
         short_name: 'Burgess Family',
