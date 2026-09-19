@@ -443,14 +443,6 @@ export default function Settings({ householdId, activeUser }) {
         <button
           className="action-button secondary"
           type="button"
-          onClick={testClosedAppPush}
-        >
-          Test Closed-App Push
-        </button>
-
-        <button
-          className="action-button secondary"
-          type="button"
           onClick={testNotifications}
         >
           Test Notification
