@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { getDeviceId } from './deviceId'
 
 export default function Messages({ householdId, activeUser }) {
   const [messages, setMessages] = useState([])
@@ -136,6 +137,7 @@ export default function Messages({ householdId, activeUser }) {
       .insert({
         household_id: householdId,
         sender_profile_id: sender.id,
+        sender_device_id: getDeviceId(),
         message_text: cleanMessage,
       })
       .select('id, sender_profile_id, message_text, created_at')

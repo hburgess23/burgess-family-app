@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { getDeviceId } from './deviceId'
 
 export default function Settings({ householdId, activeUser }) {
   const [quietStart, setQuietStart] = useState('22:00')
@@ -190,6 +191,7 @@ export default function Settings({ householdId, activeUser }) {
             p256dh: json.keys?.p256dh,
             auth_key: json.keys?.auth,
             user_agent: navigator.userAgent,
+            device_id: getDeviceId(),
             active: true,
             updated_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString(),
