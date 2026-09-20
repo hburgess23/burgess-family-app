@@ -7,6 +7,7 @@ import Grocery from './Grocery'
 import Rewards from './Rewards'
 import Messages from './Messages'
 import Reminders from './Reminders'
+import Calendar from './Calendar'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -866,6 +867,10 @@ function App() {
 
       <main>
         {active === 'Today' && <Today points={points} setActive={setActive} householdId={householdId} />}
+        {active === 'Calendar' && (
+          <Calendar activeUser={activeUser} />
+        )}
+
         {active === 'Chores' && (
           <Chores
             chores={chores}
