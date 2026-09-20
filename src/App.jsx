@@ -8,6 +8,7 @@ import Rewards from './Rewards'
 import Messages from './Messages'
 import Reminders from './Reminders'
 import Calendar from './Calendar'
+import CalendarPreview from './CalendarPreview'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -1006,7 +1007,7 @@ function Today({ points, setActive, householdId }) {
 
       <div className="card-grid">
         <Card title="Calendar" icon="📅" onClick={() => setActive('Calendar')}>
-          <p>No events added yet.</p>
+          <CalendarPreview />
         </Card>
 
         <Card title="Chores" icon="✅" onClick={() => setActive('Chores')}>

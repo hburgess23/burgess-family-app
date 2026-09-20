@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { supabase } from "./lib/supabase"
 
 const TIMEZONE = "America/Vancouver"
@@ -31,7 +31,7 @@ export default function Calendar({ activeUser }) {
 
   const range = useMemo(() => {
     const start = new Date()
-    start.setDate(start.getDate() - 30)
+    start.setHours(0, 0, 0, 0)
 
     const end = new Date()
     end.setMonth(end.getMonth() + 6)
