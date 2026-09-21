@@ -381,13 +381,6 @@ export default function Grocery({ householdId, activeUser }) {
 
   async function deleteItem(item) {
     if (!householdId) return
-
-    const confirmed = window.confirm(
-      `Delete ${capitalizeFirst(item.item_name)}?`
-    )
-
-    if (!confirmed) return
-
     const { error } = await supabase
       .from('grocery_items')
       .delete()

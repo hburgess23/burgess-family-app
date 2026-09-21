@@ -224,7 +224,6 @@ export default function Calendar({ activeUser }) {
 
   async function deleteEvent(eventId) {
     if (!isParent) return
-    if (!window.confirm("Delete this family event?")) return
 
     setError("")
 

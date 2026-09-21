@@ -1104,13 +1104,6 @@ function Chores({
 
     async function handleDeleteChore(chore) {
       if (!householdId) return
-
-      const confirmed = window.confirm(
-        `Delete "${chore.title}"? It will be removed from future chores. Previous completed history and rewards will be kept.`
-      )
-
-      if (!confirmed) return
-
       setFormError('')
       setFormMessage('')
 
