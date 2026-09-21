@@ -448,6 +448,83 @@ export default function Meals({ householdId, activeUser }) {
         </button>
       </div>
 
+      <section className="card weekly-meal-dashboard">
+        <div className="weekly-meal-dashboard-header">
+          <div>
+            <p className="eyebrow">This week</p>
+            <h3>Weekly Meal Plan</h3>
+          </div>
+
+          <span className="weekly-meal-date-range">
+            {formatDate(mealDates[0])} – {formatDate(mealDates[4])}
+          </span>
+        </div>
+
+        <div className="weekly-meal-scroll">
+          <div className="weekly-meal-grid">
+            <div className="weekly-meal-corner">
+              Meal
+            </div>
+
+            {mealDates.map((date, dayIndex) => (
+              <button
+                type="button"
+                key={`header-${getLocalDateString(date)}`}
+                className={`weekly-meal-day-header ${
+                  selectedDayIndex === dayIndex ? 'selected' : ''
+                }`}
+                onClick={() => {
+                  setSelectedDayIndex(dayIndex)
+                  setMealView('day')
+                }}
+              >
+                <strong>{getDayName(date).slice(0, 3)}</strong>
+                <span>{formatDate(date)}</span>
+              </button>
+            ))}
+
+            {visibleSlots.map((slot) => (
+              <React.Fragment key={`${slot.type}-${slot.audience}`}>
+                <div className="weekly-meal-row-label">
+                  {slot.label}
+                </div>
+
+                {mealDates.map((date, dayIndex) => {
+                  const key = mealKey(
+                    date,
+                    slot.type,
+                    slot.audience
+                  )
+
+                  const value = mealValues[key] || ''
+
+                  return (
+                    <button
+                      type="button"
+                      key={`dashboard-${key}`}
+                      className={`weekly-meal-cell ${
+                        selectedDayIndex === dayIndex ? 'selected' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedDayIndex(dayIndex)
+                        setMealView('day')
+                      }}
+                    >
+                      {value ? (
+                        <span>{value}</span>
+                      ) : (
+                        <span className="weekly-meal-empty">
+                          —
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </section>
       <div className="meal-day-tabs">
         {mealDates.map((date, index) => (
           <button

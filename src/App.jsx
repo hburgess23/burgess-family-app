@@ -8,7 +8,7 @@ import Rewards from './Rewards'
 import Messages from './Messages'
 import Reminders from './Reminders'
 import Calendar from './Calendar'
-import CalendarPreview from './CalendarPreview'
+import TodayCalendar from './TodayCalendar'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -22,6 +22,10 @@ const sections = [
   { label: 'Calendar', icon: '📅' },
   { label: 'Chores', icon: '✅' },
   { label: 'Meals', icon: '🍽️' },
+  { label: 'Grocery', icon: '🛒' },
+  { label: 'Rewards', icon: '⭐' },
+  { label: 'Messages', icon: '💬' },
+  { label: 'Reminders', icon: '🔔' },
   { label: 'More', icon: '•••' },
 ]
 
@@ -372,7 +376,7 @@ function App() {
     ] = await Promise.all([
       supabase
         .from('chores')
-        .select('id, title, points, allowance_cents, days, active')
+        .select('id, title, points, allowance_cents, days, active, scheduled_time, all_day')
         .eq('household_id', householdId)
         .order('created_at', { ascending: true }),
 
@@ -420,6 +424,8 @@ function App() {
       assignedTo: assignedByChore[chore.id] || [],
       points: chore.points || 0,
       allowance: (chore.allowance_cents || 0) / 100,
+      scheduledTime: chore.scheduled_time || '',
+      allDay: chore.all_day === true,
       days: chore.days || [],
       active: chore.active !== false,
     }))
@@ -756,7 +762,21 @@ function App() {
   if (authLoading) {
     return (
       <div className="app-shell">
-        <main>
+
+      <nav className="top-nav" aria-label="Main navigation">
+        {sections.map((item) => (
+          <button
+            key={item.label}
+            className={active === item.label ? 'nav-item active' : 'nav-item'}
+            onClick={() => setActive(item.label)}
+            type="button"
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
+      <main>
           <section className="page">
             <div className="card">
               <p>Loading…</p>
@@ -866,8 +886,22 @@ function App() {
 </button>
       </header>
 
+
+      <nav className="top-nav" aria-label="Main navigation">
+        {sections.map((item) => (
+          <button
+            key={item.label}
+            className={active === item.label ? 'nav-item active' : 'nav-item'}
+            onClick={() => setActive(item.label)}
+            type="button"
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
       <main>
-        {active === 'Today' && <Today points={points} setActive={setActive} householdId={householdId} />}
+        {active === 'Today' && <Today points={points} setActive={setActive} chores={chores} completions={completions} />}
         {active === 'Calendar' && (
           <Calendar activeUser={activeUser} />
         )}
@@ -934,137 +968,28 @@ function App() {
           <Placeholder title={active} />
         )}
       </main>
-
-      <nav className="bottom-nav" aria-label="Main navigation">
-        {sections.map((item) => (
-          <button
-            key={item.label}
-            className={active === item.label ? 'nav-item active' : 'nav-item'}
-            onClick={() => setActive(item.label)}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
     </div>
   )
 }
 
-function Today({ points, setActive, householdId }) {
-  const [todayReminders, setTodayReminders] = useState([])
-
-  useEffect(() => {
-    if (!householdId) return
-
-    let cancelled = false
-
-    async function loadTodayReminders() {
-      const { data, error } = await supabase
-        .from('family_reminders')
-        .select(
-          'id, title, reminder_date, reminder_time, repeat_type, repeat_days, active'
-        )
-        .eq('household_id', householdId)
-        .eq('active', true)
-
-      if (error) {
-        console.error('Could not load Today reminders:', error)
-        return
-      }
-
-      const dueToday = (data || [])
-        .filter((reminder) => isReminderDueOnDate(reminder))
-        .sort((a, b) =>
-          (a.reminder_time || '99:99').localeCompare(
-            b.reminder_time || '99:99'
-          )
-        )
-
-      if (!cancelled) {
-        setTodayReminders(dueToday)
-      }
-    }
-
-    loadTodayReminders()
-
-    return () => {
-      cancelled = true
-    }
-  }, [householdId])
+function Today({ points, setActive, chores, completions }) {
   return (
-    <section className="page">
-      <div className="section-heading">
+    <section className="page today-dashboard-page">
+      <div className="section-heading today-dashboard-heading">
         <div>
           <p className="eyebrow">Today</p>
           <h2>Family Dashboard</h2>
         </div>
 
         <div className="points-pill">
-          ⭐ Davina {points.Davina} · Ronin {points.Ronin}
+          ⭐ Davina {points?.Davina ?? 0} · Ronin {points?.Ronin ?? 0}
         </div>
       </div>
 
-      <div className="card-grid">
-        <Card title="Calendar" icon="📅" onClick={() => setActive('Calendar')}>
-          <CalendarPreview />
-        </Card>
-
-        <Card title="Chores" icon="✅" onClick={() => setActive('Chores')}>
-          <p>Tap Chores below to see today’s chores.</p>
-        </Card>
-
-        <Card title="Meals" icon="🍽️" onClick={() => setActive('Meals')}>
-          <p>Lunch boxes, snacks, after-school lunch and dinner.</p>
-        </Card>
-        <Card
-          title="Grocery"
-          icon="🛒"
-          onClick={() => setActive('Grocery')}
-        >
-          <p>Add items and keep the family shopping list up to date.</p>
-        </Card>
-        <Card
-          title="Rewards"
-          icon="🎁"
-          onClick={() => setActive('Rewards')}
-        >
-          <p>Spend points on family rewards and treats.</p>
-        </Card>
-
-        <Card
-        title="Reminders"
-        icon="🔔"
-        onClick={() => setActive('Reminders')}
-      >
-        {todayReminders.length === 0 ? (
-          <p>No reminders due today.</p>
-        ) : (
-          <div className="today-reminders-preview">
-            {todayReminders.slice(0, 3).map((reminder) => (
-              <p key={reminder.id}>
-                🔔 <strong>{reminder.title}</strong>
-                {reminder.reminder_time
-                  ? ` · ${reminder.reminder_time.slice(0, 5)}`
-                  : ''}
-              </p>
-            ))}
-
-            {todayReminders.length > 3 && (
-              <p>+{todayReminders.length - 3} more today</p>
-            )}
-          </div>
-        )}
-      </Card>
-
-        <Card title="Messages" icon="💬" onClick={() => setActive('Messages')}>
-          <p>Your family group chat will appear here.</p>
-        </Card>
-      </div>
+      <TodayCalendar setActive={setActive} chores={chores} completions={completions} />
     </section>
   )
 }
-
 function Chores({
   chores,
   points,
@@ -1095,6 +1020,8 @@ function Chores({
       title: '',
       assignedTo: [],
       days: [],
+      scheduledTime: '',
+      allDay: false,
       points: 0,
       allowance: 0,
     })
@@ -1111,6 +1038,8 @@ function Chores({
       title: '',
       assignedTo: [],
       days: [],
+      scheduledTime: '',
+      allDay: false,
       points: 0,
       allowance: 0,
     })
@@ -1128,6 +1057,8 @@ function Chores({
         title: chore.title,
         assignedTo: [...(chore.assignedTo || [])],
         days: [...(chore.days || [])],
+        scheduledTime: chore.scheduledTime || '',
+        allDay: chore.allDay === true,
         points: chore.points || 0,
         allowance: chore.allowance || 0,
       })
@@ -1248,6 +1179,8 @@ function Chores({
         points: parsedPoints,
         allowance_cents: Math.round(parsedAllowance * 100),
         days: choreForm.days,
+        scheduled_time: choreForm.allDay ? null : choreForm.scheduledTime || null,
+        all_day: choreForm.allDay,
         household_id: householdId,
       }
 
@@ -1473,7 +1406,19 @@ function Chores({
                   )
 
                   return (
-                    <article className="card" key={chore.id}>
+                    <article
+                      className={`card chore-card ${
+                        chore.assignedTo.includes('Davina') &&
+                        chore.assignedTo.includes('Ronin')
+                          ? 'chore-both'
+                          : chore.assignedTo.includes('Davina')
+                            ? 'chore-davina'
+                            : chore.assignedTo.includes('Ronin')
+                              ? 'chore-ronin'
+                              : 'chore-family'
+                      } ${allAssignedCompleted ? 'chore-completed' : ''}`}
+                      key={chore.id}
+                    >
                       <div className="card-title">
                         <span>{allAssignedCompleted ? '✅' : '🧹'}</span>
                         <h3>{chore.title}</h3>
@@ -1595,6 +1540,50 @@ function Chores({
                         </label>
                       ))}
                     </div>
+                    <div className="chore-schedule-options">
+                      <label
+                        className={`chore-all-day-tile ${
+                          choreForm.allDay ? 'selected' : ''
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={choreForm.allDay}
+                          onChange={(event) => {
+                            setChoreForm((current) => ({
+                              ...current,
+                              allDay: event.target.checked,
+                            }))
+                            setFormError('')
+                          }}
+                        />
+
+                        <span className="chore-all-day-icon">☀️</span>
+
+                        <span>
+                          <strong>All day</strong>
+                          <small>Can be completed anytime</small>
+                        </span>
+                      </label>
+
+                      {!choreForm.allDay && (
+                        <label className="chore-time-field">
+                          Chore time
+                          <input
+                            type="time"
+                            value={choreForm.scheduledTime}
+                            onChange={(event) => {
+                              setChoreForm((current) => ({
+                                ...current,
+                                scheduledTime: event.target.value,
+                              }))
+                              setFormError('')
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+
 
                     <label>
                       Points
@@ -1876,6 +1865,20 @@ function Login() {
 
   return (
     <div className="app-shell">
+
+      <nav className="top-nav" aria-label="Main navigation">
+        {sections.map((item) => (
+          <button
+            key={item.label}
+            className={active === item.label ? 'nav-item active' : 'nav-item'}
+            onClick={() => setActive(item.label)}
+            type="button"
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
       <main>
         <section className="page">
           <div className="card">

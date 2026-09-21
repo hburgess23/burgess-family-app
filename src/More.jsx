@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import Grocery from './Grocery'
-import Rewards from './Rewards'
 import Messages from './Messages'
 import Reminders from './Reminders'
 import Settings from './Settings'
@@ -62,24 +61,7 @@ export default function More({ householdId, activeUser }) {
       </section>
     )
   }
-  if (section === 'rewards') {
-    return (
-      <section className="page">
-        <button
-          className="action-button secondary more-back-button"
-          type="button"
-          onClick={() => setSection('menu')}
-        >
-          ← More
-        </button>
 
-        <Rewards
-          householdId={householdId}
-          activeUser={activeUser}
-        />
-      </section>
-    )
-  }
   if (section === 'grocery') {
     return (
       <section className="page">
@@ -101,10 +83,13 @@ export default function More({ householdId, activeUser }) {
 
   return (
     <section className="page">
-      <div className="section-heading">
+      <div className="section-heading more-heading">
         <div>
           <p className="eyebrow">Family tools</p>
           <h2>More</h2>
+          <p className="more-heading-description">
+            Shopping, messages, reminders and household settings.
+          </p>
         </div>
       </div>
 
@@ -121,17 +106,6 @@ export default function More({ householdId, activeUser }) {
           </div>
         </button>
 
-        <button
-          className="card more-card"
-          type="button"
-          onClick={() => setSection('rewards')}
-        >
-          <span className="more-card-icon">🎁</span>
-          <div>
-            <h3>Rewards</h3>
-            <p>Spend points in the family reward shop</p>
-          </div>
-        </button>
 
         <button
           className="card more-card"

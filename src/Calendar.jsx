@@ -7,7 +7,29 @@ function toLocalInputValue(dateTime) {
   if (!dateTime) return ""
   const d = new Date(dateTime)
   const pad = (n) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate()
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function getEventStart(event) {
+  if (event.start?.date) {
+    return new Date(`${event.start.date}T12:00:00`)
+  }
+
+  return new Date(event.start?.dateTime)
+}
+
+function getDateBadge(event) {
+  const date = getEventStart(event)
+
+  return {
+    month: date
+      .toLocaleDateString([], { month: "short" })
+      .toUpperCase(),
+    day: date.getDate(),
+  }
 }
 
 export default function Calendar({ activeUser }) {
@@ -46,13 +68,16 @@ export default function Calendar({ activeUser }) {
     setLoading(true)
     setError("")
 
-    const { data, error } = await supabase.functions.invoke("family-calendar", {
-      body: {
-        action: "list",
-        timeMin: range.timeMin,
-        timeMax: range.timeMax,
-      },
-    })
+    const { data, error } = await supabase.functions.invoke(
+      "family-calendar",
+      {
+        body: {
+          action: "list",
+          timeMin: range.timeMin,
+          timeMax: range.timeMax,
+        },
+      }
+    )
 
     if (error) {
       console.error(error)
@@ -71,6 +96,7 @@ export default function Calendar({ activeUser }) {
 
   function resetForm() {
     setEditingId(null)
+
     setForm({
       title: "",
       date: "",
@@ -134,7 +160,9 @@ export default function Calendar({ activeUser }) {
       end.setDate(end.getDate() + 1)
 
       const pad = (n) => String(n).padStart(2, "0")
-      const endDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`
+      const endDate = `${end.getFullYear()}-${pad(
+        end.getMonth() + 1
+      )}-${pad(end.getDate())}`
 
       event = {
         summary: form.title.trim(),
@@ -155,11 +183,15 @@ export default function Calendar({ activeUser }) {
         location: form.location.trim() || undefined,
         description: form.notes.trim() || undefined,
         start: {
-          dateTime: new Date(`${form.date}T${form.startTime}`).toISOString(),
+          dateTime: new Date(
+            `${form.date}T${form.startTime}`
+          ).toISOString(),
           timeZone: TIMEZONE,
         },
         end: {
-          dateTime: new Date(`${form.date}T${form.endTime}`).toISOString(),
+          dateTime: new Date(
+            `${form.date}T${form.endTime}`
+          ).toISOString(),
           timeZone: TIMEZONE,
         },
       }
@@ -167,13 +199,16 @@ export default function Calendar({ activeUser }) {
 
     const action = editingId ? "update" : "create"
 
-    const { error } = await supabase.functions.invoke("family-calendar", {
-      body: {
-        action,
-        eventId: editingId || undefined,
-        event,
-      },
-    })
+    const { error } = await supabase.functions.invoke(
+      "family-calendar",
+      {
+        body: {
+          action,
+          eventId: editingId || undefined,
+          event,
+        },
+      }
+    )
 
     if (error) {
       console.error(error)
@@ -193,12 +228,15 @@ export default function Calendar({ activeUser }) {
 
     setError("")
 
-    const { error } = await supabase.functions.invoke("family-calendar", {
-      body: {
-        action: "delete",
-        eventId,
-      },
-    })
+    const { error } = await supabase.functions.invoke(
+      "family-calendar",
+      {
+        body: {
+          action: "delete",
+          eventId,
+        },
+      }
+    )
 
     if (error) {
       console.error(error)
@@ -211,8 +249,10 @@ export default function Calendar({ activeUser }) {
 
   function formatEventDate(event) {
     if (event.start?.date) {
-      return new Date(`${event.start.date}T12:00:00`).toLocaleDateString([], {
-        weekday: "short",
+      return new Date(
+        `${event.start.date}T12:00:00`
+      ).toLocaleDateString([], {
+        weekday: "long",
         month: "short",
         day: "numeric",
       })
@@ -222,108 +262,214 @@ export default function Calendar({ activeUser }) {
     const end = new Date(event.end?.dateTime)
 
     return `${start.toLocaleDateString([], {
-      weekday: "short",
+      weekday: "long",
       month: "short",
       day: "numeric",
     })} · ${start.toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit",
-    })}–${end.toLocaleTimeString([], {
+    })} – ${end.toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit",
     })}`
   }
 
   return (
-    <section className="page">
-      <div className="section-heading">
+    <section className="page calendar-page">
+      <div className="section-heading calendar-heading">
         <div>
           <p className="eyebrow">Family</p>
           <h2>Calendar</h2>
-          <p>Synced with the Burgess Family Google Calendar.</p>
+          <p className="calendar-subtitle">
+            Everything happening with the Burgess family.
+          </p>
         </div>
+
+        <div className="calendar-heading-icon">🗓️</div>
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: 12, border: "1px solid #ddd", borderRadius: 12 }}>
-          {error}
-        </div>
+        <div className="calendar-error">{error}</div>
       )}
 
       {isParent && (
         <form
           onSubmit={saveEvent}
-          style={{
-            display: "grid",
-            gap: 12,
-            padding: 16,
-            marginBottom: 24,
-            border: "1px solid #e5e5e5",
-            borderRadius: 16,
-            background: "white",
-          }}
+          className="card calendar-form calendar-form-polished"
         >
-          <h3 style={{ margin: 0 }}>
-            {editingId ? "Edit family event" : "Add family event"}
-          </h3>
-
-          <input
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="Event name"
-          />
-
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-          />
-
-          <label>
-            <input
-              type="checkbox"
-              checked={form.allDay}
-              onChange={(e) => setForm({ ...form, allDay: e.target.checked })}
-            />{" "}
-            All day
-          </label>
-
-          {!form.allDay && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <input
-                type="time"
-                value={form.startTime}
-                onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-              />
-
-              <input
-                type="time"
-                value={form.endTime}
-                onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-              />
+          <div className="calendar-form-title">
+            <div className="calendar-form-icon">
+              {editingId ? "✏️" : "🎉"}
             </div>
-          )}
 
-          <input
-            value={form.location}
-            onChange={(e) => setForm({ ...form, location: e.target.value })}
-            placeholder="Location (optional)"
-          />
+            <div>
+              <p className="eyebrow">Parent tools</p>
+              <h3>
+                {editingId
+                  ? "Edit family event"
+                  : "Add a family event"}
+              </h3>
+            </div>
+          </div>
 
-          <textarea
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="Notes (optional)"
-            rows={3}
-          />
+          <div className="calendar-form-grid">
+            <label className="calendar-field full">
+              <span className="calendar-label">
+                <span>🎈</span>
+                Event name
+              </span>
 
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="submit" disabled={saving}>
-              {saving ? "Saving..." : editingId ? "Save changes" : "Add event"}
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    title: e.target.value,
+                  })
+                }
+                placeholder="Example: Davina swimming"
+              />
+            </label>
+
+            <label className="calendar-field">
+              <span className="calendar-label">
+                <span>📅</span>
+                Date
+              </span>
+
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    date: e.target.value,
+                  })
+                }
+              />
+            </label>
+
+            <label className="calendar-all-day-tile">
+              <input
+                type="checkbox"
+                checked={form.allDay}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    allDay: e.target.checked,
+                  })
+                }
+              />
+
+              <span className="calendar-all-day-icon">
+                ☀️
+              </span>
+
+              <span>
+                <strong>All day</strong>
+                <small>No start or end time</small>
+              </span>
+            </label>
+
+            {!form.allDay && (
+              <div className="calendar-time-row full">
+                <label className="calendar-field">
+                  <span className="calendar-label">
+                    <span>🕒</span>
+                    Starts
+                  </span>
+
+                  <input
+                    type="time"
+                    value={form.startTime}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        startTime: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+
+                <label className="calendar-field">
+                  <span className="calendar-label">
+                    <span>🏁</span>
+                    Ends
+                  </span>
+
+                  <input
+                    type="time"
+                    value={form.endTime}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        endTime: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
+            <label className="calendar-field full">
+              <span className="calendar-label">
+                <span>📍</span>
+                Location
+              </span>
+
+              <input
+                type="text"
+                value={form.location}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    location: e.target.value,
+                  })
+                }
+                placeholder="School, pool, home, community centre..."
+              />
+            </label>
+
+            <label className="calendar-field full">
+              <span className="calendar-label">
+                <span>📝</span>
+                Notes
+              </span>
+
+              <textarea
+                value={form.notes}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    notes: e.target.value,
+                  })
+                }
+                placeholder="Anything the family should remember?"
+                rows={3}
+              />
+            </label>
+          </div>
+
+          <div className="calendar-form-actions">
+            <button
+              className="action-button calendar-save-button"
+              type="submit"
+              disabled={saving}
+            >
+              {saving
+                ? "Saving..."
+                : editingId
+                ? "💾 Save changes"
+                : "➕ Add to family calendar"}
             </button>
 
             {editingId && (
-              <button type="button" onClick={resetForm}>
+              <button
+                className="action-button secondary"
+                type="button"
+                onClick={resetForm}
+              >
                 Cancel
               </button>
             )}
@@ -331,52 +477,95 @@ export default function Calendar({ activeUser }) {
         </form>
       )}
 
-      <div style={{ display: "grid", gap: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ margin: 0 }}>Upcoming events</h3>
-          <button type="button" onClick={loadEvents}>
-            Refresh
+      <div className="calendar-list">
+        <div className="calendar-list-heading">
+          <div>
+            <p className="eyebrow">Coming up</p>
+            <h3>Upcoming events</h3>
+          </div>
+
+          <button
+            className="action-button secondary"
+            type="button"
+            onClick={loadEvents}
+          >
+            ↻ Refresh
           </button>
         </div>
 
         {loading ? (
-          <p>Loading calendar...</p>
+          <div className="calendar-loading-card">
+            <span>🗓️</span>
+            <p>Checking the family calendar...</p>
+          </div>
         ) : events.length === 0 ? (
-          <p>No family events found.</p>
+          <div className="calendar-empty-card">
+            <span>🌈</span>
+            <strong>No family events yet</strong>
+            <p>Add something fun above.</p>
+          </div>
         ) : (
-          events.map((event) => (
-            <div
-              key={event.id}
-              style={{
-                padding: 14,
-                border: "1px solid #e5e5e5",
-                borderRadius: 14,
-                background: "white",
-              }}
-            >
-              <strong>{event.summary || "Untitled event"}</strong>
-              <div style={{ marginTop: 4 }}>{formatEventDate(event)}</div>
+          events.map((event) => {
+            const badge = getDateBadge(event)
 
-              {event.location && (
-                <div style={{ marginTop: 4 }}>Location: {event.location}</div>
-              )}
+            return (
+              <article
+                key={event.id}
+                className="card calendar-event-card"
+              >
+                <div className="calendar-event-layout">
+                  <div className="calendar-date-badge">
+                    <span>{badge.month}</span>
+                    <strong>{badge.day}</strong>
+                  </div>
 
-              {event.description && (
-                <div style={{ marginTop: 4 }}>{event.description}</div>
-              )}
+                  <div className="calendar-event-copy">
+                    <h3>
+                      {event.summary || "Untitled event"}
+                    </h3>
 
-              {isParent && (
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <button type="button" onClick={() => editEvent(event)}>
-                    Edit
-                  </button>
-                  <button type="button" onClick={() => deleteEvent(event.id)}>
-                    Delete
-                  </button>
+                    <p className="calendar-event-date">
+                      {formatEventDate(event)}
+                    </p>
+
+                    {event.location && (
+                      <p className="calendar-event-meta">
+                        📍 {event.location}
+                      </p>
+                    )}
+
+                    {event.description && (
+                      <p className="calendar-event-meta">
+                        📝 {event.description}
+                      </p>
+                    )}
+
+                    {isParent && (
+                      <div className="calendar-event-actions">
+                        <button
+                          className="action-button secondary"
+                          type="button"
+                          onClick={() => editEvent(event)}
+                        >
+                          ✏️ Edit
+                        </button>
+
+                        <button
+                          className="action-button secondary"
+                          type="button"
+                          onClick={() =>
+                            deleteEvent(event.id)
+                          }
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))
+              </article>
+            )
+          })
         )}
       </div>
     </section>

@@ -286,8 +286,60 @@ export default function Rewards({ householdId, activeUser }) {
       {errorMessage && (
         <p className="form-message error">{errorMessage}</p>
       )}
+      {isParent && !loading && (
+        <div className="reward-child-columns">
+          {childProfiles.map((profile) => {
+            const childRedemptions = redemptions
+              .filter(
+                (redemption) =>
+                  redemption.profile_id === profile.id
+              )
+              .slice(0, 3)
 
-      {loading ? (
+            return (
+              <section
+                className={`reward-child-column reward-child-${profile.name.toLowerCase()}`}
+                key={profile.id}
+              >
+                <div className="reward-child-header">
+                  <div className="reward-child-avatar">
+                    {profile.emoji}
+                  </div>
+
+                  <div>
+                    <p className="eyebrow">Rewards</p>
+                    <h3>{profile.name}</h3>
+                    <div className="reward-child-points">
+                      ⭐ {balances[profile.id] || 0} points
+                    </div>
+                  </div>
+                </div>
+
+                <div className="reward-child-recent">
+                  <strong>Recent rewards</strong>
+
+                  {childRedemptions.length === 0 ? (
+                    <p>No rewards redeemed yet.</p>
+                  ) : (
+                    childRedemptions.map((redemption) => (
+                      <div
+                        className="reward-child-history-row"
+                        key={redemption.id}
+                      >
+                        <span>{redemption.reward_name}</span>
+                        <strong>
+                          ⭐ -{redemption.points_spent}
+                        </strong>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      )}
+{loading ? (
         <div className="card">
           <p>Loading rewards…</p>
         </div>

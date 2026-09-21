@@ -335,7 +335,7 @@ export default function Settings({ householdId, activeUser }) {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card settings-card quiet-hours-card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Notifications</p>
@@ -409,7 +409,7 @@ export default function Settings({ householdId, activeUser }) {
         )}
       </div>
 
-      <div className="card">
+      <div className="card settings-card device-notifications-card">
         <div className="section-heading">
           <div>
             <p className="eyebrow">This device</p>
