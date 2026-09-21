@@ -1896,19 +1896,6 @@ function Login() {
   return (
     <div className="app-shell">
 
-      <nav className="top-nav" aria-label="Main navigation">
-        {sections.map((item) => (
-          <button
-            key={item.label}
-            className={active === item.label ? 'nav-item active' : 'nav-item'}
-            onClick={() => setActive(item.label)}
-            type="button"
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
       <main>
         <section className="page">
           <div className="card">
