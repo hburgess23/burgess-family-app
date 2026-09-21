@@ -5235,3 +5235,179 @@ form textarea + button {
     grid-column: auto;
   }
 }
+/* ===== Today Calendar Day View ===== */
+
+.today-week-calendar.day-view {
+  width: 100%;
+  min-width: 0;
+}
+
+.today-week-calendar.day-view .today-week-header,
+.today-week-calendar.day-view .today-week-all-day,
+.today-week-calendar.day-view .today-week-body {
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+
+.today-week-calendar.day-view .today-week-day-header {
+  min-width: 0;
+}
+
+.today-week-calendar.day-view .today-week-all-day-cell,
+.today-week-calendar.day-view .today-week-day-column {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .today-week-calendar.day-view {
+    min-width: 0;
+  }
+
+  .today-week-calendar.day-view .today-week-header,
+  .today-week-calendar.day-view .today-week-all-day,
+  .today-week-calendar.day-view .today-week-body {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+}
+
+/* ===== Chore Delete Button ===== */
+
+.chore-delete-button {
+  background: #fff0f0 !important;
+  border-color: #efbcbc !important;
+  color: #b83232 !important;
+}
+
+.chore-delete-button:hover {
+  background: #ffe0e0 !important;
+  border-color: #df9c9c !important;
+}
+
+/* ===== Dashboard Today Reminders ===== */
+
+.today-reminders-card {
+  margin-top: 20px;
+  padding: 22px;
+  border-radius: 24px;
+  background: #fff8e8;
+  border-color: #efddb0;
+}
+
+.today-reminders-heading {
+  margin-bottom: 14px;
+}
+
+.today-reminders-heading h3 {
+  margin-top: 2px;
+  font-size: 22px;
+}
+
+.today-reminders-count {
+  min-width: 58px;
+  height: 42px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: white;
+  border: 1px solid #ead8aa;
+  font-weight: 850;
+  font-size: 16px;
+}
+
+.today-reminders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-reminder-item {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid #eadfca;
+  border-radius: 15px;
+  background: white;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.today-reminder-item:hover {
+  border-color: #d9c28b;
+  background: #fffdf8;
+}
+
+.today-reminder-bell {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #fff2c9;
+}
+
+.today-reminder-title {
+  min-width: 0;
+  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-reminder-time {
+  min-width: 58px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: #eef1ff;
+  color: #4056c8;
+  font-size: 14px;
+  text-align: center;
+}
+
+.today-reminders-empty {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #77717d;
+}
+
+.today-reminders-empty p {
+  margin: 0;
+}
+
+.today-reminders-more {
+  margin: 4px 0 0;
+  color: #77717d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.today-reminders-view-all {
+  width: 100%;
+  margin-top: 14px;
+  min-height: 46px;
+  border-radius: 14px;
+}
+
+@media (max-width: 560px) {
+  .today-reminders-card {
+    padding: 16px;
+  }
+
+  .today-reminder-item {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+
+  .today-reminder-time {
+    min-width: 52px;
+    font-size: 13px;
+  }
+}

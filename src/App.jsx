@@ -9,6 +9,7 @@ import Messages from './Messages'
 import Reminders from './Reminders'
 import Calendar from './Calendar'
 import TodayCalendar from './TodayCalendar'
+import TodayReminders from './TodayReminders'
 
 const family = [
   { name: 'Harold', role: 'Parent', emoji: '👨🏽' },
@@ -901,7 +902,15 @@ function App() {
         ))}
       </nav>
       <main>
-        {active === 'Today' && <Today points={points} setActive={setActive} chores={chores} completions={completions} />}
+        {active === 'Today' && (
+          <Today
+            points={points}
+            setActive={setActive}
+            chores={chores}
+            completions={completions}
+            householdId={householdId}
+          />
+        )}
         {active === 'Calendar' && (
           <Calendar activeUser={activeUser} />
         )}
@@ -972,7 +981,7 @@ function App() {
   )
 }
 
-function Today({ points, setActive, chores, completions }) {
+function Today({ points, setActive, chores, completions, householdId }) {
   return (
     <section className="page today-dashboard-page">
       <div className="section-heading today-dashboard-heading">
@@ -987,6 +996,11 @@ function Today({ points, setActive, chores, completions }) {
       </div>
 
       <TodayCalendar setActive={setActive} chores={chores} completions={completions} />
+
+      <TodayReminders
+        householdId={householdId}
+        setActive={setActive}
+      />
     </section>
   )
 }
@@ -1032,7 +1046,9 @@ function Chores({
     const selectedDateStr = getLocalDateString(selectedDate)
     const historySelectedDateStr = getLocalDateString(historySelectedDate)
     const activeChores = chores.filter((chore) => chore.active !== false)
-    const choreListForManagement = [...chores].sort((a, b) => a.title.localeCompare(b.title))
+    const choreListForManagement = chores
+      .filter((chore) => chore.active !== false)
+      .sort((a, b) => a.title.localeCompare(b.title))
 
     const emptyChoreForm = () => ({
       title: '',
@@ -1086,24 +1102,38 @@ function Chores({
       setFormError('')
     }
 
-    async function handleToggleChoreActive(chore) {
+    async function handleDeleteChore(chore) {
       if (!householdId) return
 
-      const nextActiveState = chore.active === false
+      const confirmed = window.confirm(
+        `Delete "${chore.title}"? It will be removed from future chores. Previous completed history and rewards will be kept.`
+      )
+
+      if (!confirmed) return
+
+      setFormError('')
+      setFormMessage('')
+
       const { error } = await supabase
         .from('chores')
-        .update({ active: nextActiveState })
+        .update({ active: false })
         .eq('id', chore.id)
         .eq('household_id', householdId)
 
       if (error) {
-        setFormError(`Could not ${nextActiveState ? 'enable' : 'disable'} this chore.`)
+        console.error('Could not delete chore:', error)
+        setFormError('Could not delete this chore.')
         return
       }
 
+      if (editingChoreId === chore.id) {
+        setEditingChoreId(null)
+        setChoreForm(emptyChoreForm())
+      }
+
+      setFormMessage('Chore deleted.')
       await refreshChores()
     }
-
     async function handleSaveChore(event) {
       event.preventDefault()
 
@@ -1660,11 +1690,11 @@ function Chores({
                             Edit
                           </button>
                           <button
-                            className="action-button secondary"
+                            className="action-button secondary chore-delete-button"
                             type="button"
-                            onClick={() => handleToggleChoreActive(chore)}
+                            onClick={() => handleDeleteChore(chore)}
                           >
-                            {chore.active === false ? 'Enable' : 'Disable'}
+                            Delete
                           </button>
                         </div>
                       </div>

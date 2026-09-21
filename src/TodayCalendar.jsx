@@ -238,6 +238,10 @@ export default function TodayCalendar({
     useState(false)
 
   const visibleDays = useMemo(() => {
+    if (view === "day") {
+      return [startOfDay(cursorDate)]
+    }
+
     if (view === "week") {
       const start = startOfWeek(cursorDate)
 
@@ -419,7 +423,9 @@ export default function TodayCalendar({
     setCursorDate((current) => {
       const next = new Date(current)
 
-      if (view === "week") {
+      if (view === "day") {
+        next.setDate(next.getDate() - 1)
+      } else if (view === "week") {
         next.setDate(
           next.getDate() - 7
         )
@@ -437,7 +443,9 @@ export default function TodayCalendar({
     setCursorDate((current) => {
       const next = new Date(current)
 
-      if (view === "week") {
+      if (view === "day") {
+        next.setDate(next.getDate() + 1)
+      } else if (view === "week") {
         next.setDate(
           next.getDate() + 7
         )
@@ -452,7 +460,14 @@ export default function TodayCalendar({
   }
 
   const heading =
-    view === "week"
+    view === "day"
+      ? cursorDate.toLocaleDateString([], {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : view === "week"
       ? `${visibleDays[0].toLocaleDateString([], {
           month: "short",
           day: "numeric",
@@ -478,6 +493,20 @@ export default function TodayCalendar({
 
         <div className="today-calendar-controls">
           <div className="today-calendar-toggle">
+            <button
+              type="button"
+              className={
+                view === "day"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setView("day")
+              }
+            >
+              Day
+            </button>
+
             <button
               type="button"
               className={
@@ -543,9 +572,15 @@ export default function TodayCalendar({
         </button>
       </div>
 
-      {view === "week" ? (
+      {view !== "month" ? (
         <div className="today-week-scroll">
-          <div className="today-week-calendar">
+          <div
+            className={
+              view === "day"
+                ? "today-week-calendar day-view"
+                : "today-week-calendar"
+            }
+          >
             <div className="today-week-header">
               <div className="today-week-time-spacer" />
 
