@@ -30,6 +30,8 @@ const sections = [
   { label: 'More', icon: '•••' },
 ]
 
+const childSectionLabels = new Set(['Today', 'Chores', 'Rewards'])
+
 const startingChores = [
   {
     id: 1,
@@ -133,6 +135,23 @@ function App() {
 
   const [active, setActive] = useState('Today')
   const [activeUser, setActiveUser] = useState(family[0])
+
+  const visibleSections =
+    activeUser.role === 'Child'
+      ? sections.filter((item) => childSectionLabels.has(item.label))
+      : sections
+
+  function handleSectionChange(nextSection) {
+    if (
+      activeUser.role === 'Child' &&
+      !childSectionLabels.has(nextSection)
+    ) {
+      setActive('Today')
+      return
+    }
+
+    setActive(nextSection)
+  }
   const [pendingParent, setPendingParent] = useState(null)
   const [parentPin, setParentPin] = useState('')
   const [parentPinError, setParentPinError] = useState('')
@@ -277,6 +296,15 @@ function App() {
       window.clearInterval(timer)
     }
   }, [householdId])
+
+  useEffect(() => {
+    if (
+      activeUser.role === 'Child' &&
+      !childSectionLabels.has(active)
+    ) {
+      setActive('Today')
+    }
+  }, [activeUser.role, active])
 
   function handleProfileClick(person) {
     if (person.role === 'Child') {
@@ -765,11 +793,11 @@ function App() {
       <div className="app-shell">
 
       <nav className="top-nav" aria-label="Main navigation">
-        {sections.map((item) => (
+        {visibleSections.map((item) => (
           <button
             key={item.label}
             className={active === item.label ? 'nav-item active' : 'nav-item'}
-            onClick={() => setActive(item.label)}
+            onClick={() => handleSectionChange(item.label)}
             type="button"
           >
             <span className="nav-icon">{item.icon}</span>
@@ -889,11 +917,11 @@ function App() {
 
 
       <nav className="top-nav" aria-label="Main navigation">
-        {sections.map((item) => (
+        {visibleSections.map((item) => (
           <button
             key={item.label}
             className={active === item.label ? 'nav-item active' : 'nav-item'}
-            onClick={() => setActive(item.label)}
+            onClick={() => handleSectionChange(item.label)}
             type="button"
           >
             <span className="nav-icon">{item.icon}</span>
